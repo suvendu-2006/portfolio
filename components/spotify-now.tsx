@@ -12,7 +12,7 @@ interface Track {
   durationMs?: number | null;
 }
 
-const INITIAL_TRACK: Track = {
+const DEFAULT_TRACK: Track = {
   playing: false,
   title: "TIT FOR TAT",
   artist: "Tate McRae",
@@ -40,8 +40,23 @@ export function SpotifyLogo({ className }: { className?: string }) {
  * - Artist name
  */
 export function SpotifyBrand() {
-  const [track, setTrack] = useState<Track | null>(INITIAL_TRACK);
+  const [track, setTrack] = useState<Track | null>(DEFAULT_TRACK);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Restore real played track from localStorage on mount so it never reverts to placeholders
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("shuv_spotify_track");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.title) {
+          setTrack((prev) => (prev?.playing ? prev : { ...parsed, playing: false }));
+        }
+      }
+    } catch {
+      /* ignore storage read error */
+    }
+  }, []);
 
   const poll = useCallback(async () => {
     try {
@@ -66,31 +81,17 @@ export function SpotifyBrand() {
           ) {
             return prev;
           }
+          // Persist the verified track so it's remembered across reloads and idle times
           try {
-            localStorage.setItem("shuv_last_played_track", JSON.stringify(data));
+            localStorage.setItem("shuv_spotify_track", JSON.stringify(data));
           } catch {
-            /* localStorage quota / private mode */
+            /* ignore storage write error */
           }
           return data;
         });
       }
     } catch {
       /* preserve existing track on transient network blip */
-    }
-  }, []);
-
-  // Restore the user's actual last played track from localStorage on page load
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("shuv_last_played_track");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.title) {
-          setTrack((current) => (current?.playing ? current : { ...parsed, playing: false }));
-        }
-      }
-    } catch {
-      /* ignore */
     }
   }, []);
 
