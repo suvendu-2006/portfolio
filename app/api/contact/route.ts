@@ -1,18 +1,5 @@
 import { NextResponse } from "next/server";
 
-/**
- * Contact form backend — TODO (yours to wire):
- *
- * The form on the site posts JSON { name, email, message } here. To receive
- * the messages, either:
- *   1. Sign up at resend.com (free tier), verify your domain or use your own
- *      email as the "from", then set RESEND_API_KEY in your environment
- *      (.env.local locally, Vercel dashboard in production), and uncomment
- *      the send block below; or
- *   2. Point the form at a form service (e.g. Formspree) instead.
- *
- * Your email address is never rendered into the site's HTML either way.
- */
 export async function POST(req: Request) {
   const data = await req.json().catch(() => null);
   const name = typeof data?.name === "string" ? data.name.trim() : "";
@@ -26,37 +13,50 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message:
-          "The form backend isn't connected yet (TODO: add RESEND_API_KEY). Reach out via LinkedIn, X or GitHub for now.",
-      },
-      { status: 501 }
-    );
+  const toEmail = process.env.CONTACT_TO_EMAIL || "iitsuvendu@gmail.com";
+
+  // If RESEND_API_KEY is configured in Vercel / environment, deliver directly via Resend API
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM_EMAIL || "Portfolio Contact <onboarding@resend.dev>",
+          to: toEmail,
+          reply_to: email,
+          subject: `Portfolio message from ${name}`,
+          text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+        }),
+      });
+
+      if (res.ok) {
+        return NextResponse.json({
+          ok: true,
+          message: "Message sent — I'll get back to you soon.",
+        });
+      }
+
+      const err = await res.json().catch(() => null);
+      console.error("Resend error:", err);
+    } catch (err) {
+      console.error("Failed to send email via Resend:", err);
+    }
   }
 
-  // TODO: uncomment after adding RESEND_API_KEY + a verified "from" address
-  // const res = await fetch("https://api.resend.com/emails", {
-  //   method: "POST",
-  //   headers: {
-  //     Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-  //     "Content-Type": "application/json",
-  //   },
-  //   body: JSON.stringify({
-  //     from: "portfolio@yourdomain.com",
-  //     to: process.env.CONTACT_TO_EMAIL,
-  //     reply_to: email,
-  //     subject: `Portfolio message from ${name}`,
-  //     text: message,
-  //   }),
-  // });
-  // if (!res.ok) return NextResponse.json({ ok: false, message: "Send failed." }, { status: 502 });
-  // return NextResponse.json({ ok: true, message: "Message sent — I'll get back to you soon." });
+  // Seamless fallback when RESEND_API_KEY is pending:
+  // Returns mailto payload so client can trigger direct mail compose to toEmail
+  const subject = `Portfolio message from ${name}`;
+  const body = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
+  const mailto = `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-  return NextResponse.json(
-    { ok: false, message: "TODO: send block is commented out in app/api/contact/route.ts." },
-    { status: 501 }
-  );
+  return NextResponse.json({
+    ok: true,
+    fallback: "mailto",
+    mailto,
+    message: "Opening your email app to complete sending to Suvendu...",
+  });
 }

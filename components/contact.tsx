@@ -30,6 +30,9 @@ export function Contact() {
       if (res.ok && json.ok) {
         setState("sent");
         setMessage(json.message ?? "Message sent.");
+        if (json.fallback === "mailto" && typeof json.mailto === "string") {
+          window.location.href = json.mailto;
+        }
         form.reset();
       } else {
         setState("error");
