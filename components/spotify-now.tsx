@@ -12,6 +12,16 @@ interface Track {
   durationMs?: number | null;
 }
 
+const INITIAL_TRACK: Track = {
+  playing: false,
+  title: "Señorita",
+  artist: "Shawn Mendes, Camila Cabello",
+  art: "https://i.scdn.co/image/ab67616d0000b273e6095c382c2853667c1623eb",
+  url: "https://open.spotify.com/track/0TK2YIli7K1leLovkQiNik",
+  progressMs: null,
+  durationMs: 190960,
+};
+
 /** The official Spotify mark. */
 export function SpotifyLogo({ className }: { className?: string }) {
   return (
@@ -30,7 +40,7 @@ export function SpotifyLogo({ className }: { className?: string }) {
  * - Artist name
  */
 export function SpotifyBrand() {
-  const [track, setTrack] = useState<Track | null>(null);
+  const [track, setTrack] = useState<Track | null>(INITIAL_TRACK);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const poll = useCallback(async () => {
@@ -66,7 +76,9 @@ export function SpotifyBrand() {
 
   useEffect(() => {
     poll();
-    const id = setInterval(poll, 2500);
+    // Poll every 5s when active or 12s when idle
+    const intervalTime = track?.playing ? 5000 : 12000;
+    const id = setInterval(poll, intervalTime);
 
     const onVisibilityOrFocus = () => {
       if (document.visibilityState === "visible") {
@@ -82,7 +94,7 @@ export function SpotifyBrand() {
       window.removeEventListener("focus", onVisibilityOrFocus);
       document.removeEventListener("visibilitychange", onVisibilityOrFocus);
     };
-  }, [poll]);
+  }, [poll, track?.playing]);
 
   const albumArtLogo = (
     <div
