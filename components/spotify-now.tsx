@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { AnimatePresence, m } from "framer-motion";
 
 interface Track {
   playing: boolean;
@@ -23,12 +24,15 @@ export function SpotifyLogo({ className }: { className?: string }) {
 
 /**
  * Header brand slot (far left):
- * When Spotify is active, displays the song's album poster inside a circular
- * vinyl-style disc with a mini Spotify badge, plus real-time "Now playing" or
- * "Recently played" song & artist info.
+ * Shows the song's album poster inside a circular spinning vinyl disc.
+ * On mobile (< sm): Compact 32px disc to guarantee zero overlap with "Projects",
+ * expandable on tap into a clean floating card.
+ * On desktop (>= sm): Full inline song title & artist lockup.
  */
 export function SpotifyBrand() {
   const [track, setTrack] = useState<Track | null>(null);
+  const [openMobile, setOpenMobile] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const poll = useCallback(async () => {
     try {
@@ -63,10 +67,8 @@ export function SpotifyBrand() {
 
   useEffect(() => {
     poll();
-    // Ultra-fast 2.5s polling for immediate song/pause synchronization
     const id = setInterval(poll, 2500);
 
-    // Immediate sync when returning to the tab or focusing window
     const onVisibilityOrFocus = () => {
       if (document.visibilityState === "visible") {
         poll();
@@ -83,11 +85,37 @@ export function SpotifyBrand() {
     };
   }, [poll]);
 
+  // Close mobile popup on outside click or scroll
+  useEffect(() => {
+    if (!openMobile) return;
+    const onOutside = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpenMobile(false);
+      }
+    };
+    const onScroll = () => setOpenMobile(false);
+
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside);
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [openMobile]);
+
   const albumArtLogo = (
-    <div className="relative size-8 shrink-0">
+    <button
+      type="button"
+      onClick={() => setOpenMobile((v) => !v)}
+      className="relative size-8 shrink-0 cursor-pointer transition-transform active:scale-95 sm:cursor-default sm:active:scale-100"
+      aria-label="Toggle Spotify playback info"
+    >
       {track?.art ? (
         <div
-          className={`relative size-8 overflow-hidden rounded-full border border-line bg-surface shadow-sm ${
+          className={`relative size-8 overflow-hidden rounded-full border border-line bg-panel shadow-sm ${
             track.playing ? "animate-[spin_8s_linear_infinite]" : ""
           }`}
         >
@@ -108,40 +136,84 @@ export function SpotifyBrand() {
           <SpotifyLogo className="size-2.5" />
         </span>
       )}
-    </div>
+    </button>
   );
-
-  const lockup = track && track.title ? (
-    <span className="flex max-w-[150px] flex-col gap-0.5 sm:max-w-[200px]">
-      <span className="flex items-center gap-1.5">
-        <span
-          aria-hidden="true"
-          className={`size-1.5 shrink-0 rounded-full ${
-            track.playing ? "bg-[#1db954] motion-safe:animate-pulse" : "bg-muted"
-          }`}
-        />
-        <span className="truncate text-[8.5px] font-medium uppercase tracking-[0.16em] text-muted">
-          {track.playing ? "Now playing" : "Recently played"}
-        </span>
-      </span>
-      <span className="truncate text-[12.5px] font-semibold leading-tight text-ink">
-        {track.title}
-      </span>
-      {track.artist && (
-        <span className="truncate text-[10.5px] leading-tight text-muted">
-          {track.artist}
-        </span>
-      )}
-    </span>
-  ) : null;
 
   return (
     <div
+      ref={containerRef}
       onMouseEnter={poll}
-      className="flex min-w-0 items-center gap-2.5 cursor-default select-none"
+      className="relative flex shrink-0 items-center gap-2.5 cursor-default select-none"
     >
       {albumArtLogo}
-      {lockup}
+
+      {/* Desktop Inline Lockup (hidden on mobile to guarantee zero overlap with nav links) */}
+      {track && track.title && (
+        <span className="hidden sm:flex max-w-[170px] lg:max-w-[240px] flex-col gap-0.5">
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className={`size-1.5 shrink-0 rounded-full ${
+                track.playing ? "bg-[#1db954] motion-safe:animate-pulse" : "bg-muted"
+              }`}
+            />
+            <span className="truncate text-[8.5px] font-medium uppercase tracking-[0.16em] text-muted">
+              {track.playing ? "Now playing" : "Recently played"}
+            </span>
+          </span>
+          <span className="truncate text-[12.5px] font-semibold leading-tight text-ink">
+            {track.title}
+          </span>
+          {track.artist && (
+            <span className="truncate text-[10.5px] leading-tight text-muted">
+              {track.artist}
+            </span>
+          )}
+        </span>
+      )}
+
+      {/* Mobile Floating Card (opens on tap, perfectly positioned without colliding with Projects) */}
+      <AnimatePresence>
+        {openMobile && track && track.title && (
+          <m.div
+            initial={{ opacity: 0, y: -6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 top-11 z-[70] w-64 rounded-xl border border-line bg-panel/95 p-3.5 shadow-2xl backdrop-blur-xl sm:hidden"
+          >
+            <div className="flex items-start gap-3">
+              {track.art && (
+                <div className="relative size-11 shrink-0 overflow-hidden rounded-lg border border-line">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={track.art} alt={track.title} className="size-full object-cover" />
+                </div>
+              )}
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className={`size-1.5 shrink-0 rounded-full ${
+                      track.playing ? "bg-[#1db954] motion-safe:animate-pulse" : "bg-muted"
+                    }`}
+                  />
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-accent">
+                    {track.playing ? "Now playing" : "Recently played"}
+                  </span>
+                </span>
+                <span className="truncate text-sm font-bold text-ink">
+                  {track.title}
+                </span>
+                {track.artist && (
+                  <span className="truncate text-xs text-muted">
+                    {track.artist}
+                  </span>
+                )}
+              </div>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

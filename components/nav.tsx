@@ -39,9 +39,9 @@ export function Nav() {
         className="fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-accent"
         style={{ scaleX: scrollYProgress }}
       />
-      <div className="mx-auto flex h-14 max-w-content items-center justify-between px-5">
+      <div className="mx-auto flex h-14 max-w-content items-center justify-between gap-3 px-4 sm:px-5">
         <SpotifyBrand />
-        <nav aria-label="Primary" className="flex items-center gap-1 overflow-x-auto sm:gap-2">
+        <nav aria-label="Primary" className="nav-strip flex shrink-0 items-center gap-1 sm:gap-2">
           {links.map((link, i) => {
             const isActive = active === link.href.slice(1);
             return (
@@ -49,7 +49,7 @@ export function Nav() {
                 key={link.href}
                 href={link.href}
                 aria-current={isActive ? "true" : undefined}
-                className={`u-line u-line-tight rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-[13px] ${
+                className={`u-line u-line-tight shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-[13px] ${
                   isActive ? "text-ink" : "text-soft hover:text-ink"
                 }`}
               >

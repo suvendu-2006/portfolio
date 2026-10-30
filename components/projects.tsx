@@ -112,7 +112,7 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative aspect-[21/9] w-full border-b border-line">
+            <div className="relative aspect-[16/9] w-full border-b border-line sm:aspect-[21/9]">
               <Image
                 src={project.image.src}
                 alt={project.image.alt}

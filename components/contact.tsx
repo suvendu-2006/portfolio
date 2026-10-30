@@ -78,7 +78,7 @@ export function Contact() {
                   name="name"
                   required
                   autoComplete="name"
-                  className="w-full rounded-lg border border-line bg-panel px-4 py-3 text-sm text-ink placeholder:text-muted focus-visible:outline-accent"
+                  className="w-full rounded-lg border border-line bg-panel px-4 py-3 text-base sm:text-sm text-ink placeholder:text-muted focus-visible:outline-accent"
                   placeholder="Your name"
                 />
               </div>
@@ -92,7 +92,7 @@ export function Contact() {
                   type="email"
                   required
                   autoComplete="email"
-                  className="w-full rounded-lg border border-line bg-panel px-4 py-3 text-sm text-ink placeholder:text-muted focus-visible:outline-accent"
+                  className="w-full rounded-lg border border-line bg-panel px-4 py-3 text-base sm:text-sm text-ink placeholder:text-muted focus-visible:outline-accent"
                   placeholder="you@example.com"
                 />
               </div>
@@ -105,7 +105,7 @@ export function Contact() {
                   name="message"
                   required
                   rows={5}
-                  className="w-full rounded-lg border border-line bg-panel px-4 py-3 text-sm text-ink placeholder:text-muted focus-visible:outline-accent"
+                  className="w-full rounded-lg border border-line bg-panel px-4 py-3 text-base sm:text-sm text-ink placeholder:text-muted focus-visible:outline-accent"
                   placeholder="What's on your mind?"
                 />
               </div>
