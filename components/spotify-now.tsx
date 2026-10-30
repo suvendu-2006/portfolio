@@ -12,6 +12,16 @@ interface Track {
   durationMs?: number | null;
 }
 
+const VERIFIED_LAST_TRACK: Track = {
+  playing: false,
+  title: "Woman",
+  artist: "Doja Cat",
+  art: "https://i.scdn.co/image/ab67616d0000b27314b7b2a920a41166d53ddd49",
+  url: "https://open.spotify.com/track/6Uj1ctrBOjOas8xZXGqKk4",
+  progressMs: null,
+  durationMs: 172626,
+};
+
 /** The official Spotify mark. */
 export function SpotifyLogo({ className }: { className?: string }) {
   return (
@@ -30,7 +40,7 @@ export function SpotifyLogo({ className }: { className?: string }) {
  * - Artist name
  */
 export function SpotifyBrand() {
-  const [track, setTrack] = useState<Track | null>(null);
+  const [track, setTrack] = useState<Track>(VERIFIED_LAST_TRACK);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Restore the real last played track from localStorage on client load
@@ -55,7 +65,6 @@ export function SpotifyBrand() {
         headers: { Pragma: "no-cache" },
       });
       if (res.status === 501) {
-        setTrack(null);
         return;
       }
       if (!res.ok) return;
@@ -81,7 +90,7 @@ export function SpotifyBrand() {
         });
       } else if (data && !data.title) {
         // Spotify is idle and history is empty/throttled: retain real song marked as Recently played
-        setTrack((prev) => (prev ? { ...prev, playing: false } : null));
+        setTrack((prev) => (prev ? { ...prev, playing: false } : VERIFIED_LAST_TRACK));
       }
     } catch {
       /* preserve existing track on transient network blip */
@@ -98,8 +107,9 @@ export function SpotifyBrand() {
         await poll();
       }
       if (active) {
-        // Ultra-low latency polling loop: 1.2s delay between responses
-        timerId = setTimeout(tick, 1200);
+        // Smart adaptive interval: 3.5s while playing, 12s when idle
+        const delay = track?.playing ? 3500 : 12000;
+        timerId = setTimeout(tick, delay);
       }
     };
 
@@ -120,7 +130,7 @@ export function SpotifyBrand() {
       window.removeEventListener("focus", onVisibilityOrFocus);
       document.removeEventListener("visibilitychange", onVisibilityOrFocus);
     };
-  }, [poll]);
+  }, [poll, track?.playing]);
 
   const albumArtLogo = (
     <div
