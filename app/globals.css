@@ -41,6 +41,16 @@ html {
 
 body {
   text-rendering: optimizeLegibility;
+  /* clean taps on mobile — focus-visible outlines remain for keyboards */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* the header link strip scrolls on small screens; hide its scrollbar */
+.nav-strip {
+  scrollbar-width: none;
+}
+.nav-strip::-webkit-scrollbar {
+  display: none;
 }
 
 ::selection {

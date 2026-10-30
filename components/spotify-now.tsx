@@ -135,32 +135,13 @@ export function SpotifyBrand() {
     </span>
   ) : null;
 
-  if (track && track.url) {
-    return (
-      <a
-        href={track.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onMouseEnter={poll}
-        aria-label={`Open on Spotify: ${track.title} by ${track.artist}`}
-        title={`${track.title} — ${track.artist} · Click to open on Spotify`}
-        className="flex min-w-0 items-center gap-2.5 transition-opacity duration-200 hover:opacity-85"
-      >
-        {albumArtLogo}
-        {lockup}
-      </a>
-    );
-  }
-
   return (
-    <a
-      href="#main"
+    <div
       onMouseEnter={poll}
-      aria-label="Back to top"
-      className="flex items-center gap-2.5"
+      className="flex min-w-0 items-center gap-2.5 cursor-default select-none"
     >
       {albumArtLogo}
       {lockup}
-    </a>
+    </div>
   );
 }

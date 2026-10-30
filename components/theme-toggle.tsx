@@ -79,7 +79,7 @@ export function ThemeToggle() {
       id="themeToggle"
       aria-label={light ? "Switch to dark mode" : "Switch to light mode"}
       onClick={onToggle}
-      className="grid size-8 place-items-center rounded-full border border-line text-soft transition-colors hover:border-muted hover:text-ink"
+      className="grid size-9 place-items-center rounded-full border border-line text-soft transition-colors hover:border-muted hover:text-ink sm:size-8"
     >
       <m.span
         key={light ? "moon" : "sun"}
