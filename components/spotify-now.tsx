@@ -75,14 +75,21 @@ export function SpotifyBrand() {
   }, []);
 
   useEffect(() => {
-    poll();
-    // Fast near-instant sync: poll every 2s while playing, 2.5s while idle (only when tab is actively visible)
-    const intervalTime = track?.playing ? 2000 : 2500;
-    const id = setInterval(() => {
+    let active = true;
+    let timerId: ReturnType<typeof setTimeout>;
+
+    const tick = async () => {
+      if (!active) return;
       if (document.visibilityState === "visible") {
-        poll();
+        await poll();
       }
-    }, intervalTime);
+      if (active) {
+        // Ultra-low latency polling loop: 1.2s delay between responses
+        timerId = setTimeout(tick, 1200);
+      }
+    };
+
+    tick();
 
     const onVisibilityOrFocus = () => {
       if (document.visibilityState === "visible") {
@@ -94,11 +101,12 @@ export function SpotifyBrand() {
     document.addEventListener("visibilitychange", onVisibilityOrFocus);
 
     return () => {
-      clearInterval(id);
+      active = false;
+      clearTimeout(timerId);
       window.removeEventListener("focus", onVisibilityOrFocus);
       document.removeEventListener("visibilitychange", onVisibilityOrFocus);
     };
-  }, [poll, track?.playing]);
+  }, [poll]);
 
   const albumArtLogo = (
     <div
