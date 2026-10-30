@@ -4,23 +4,13 @@ import { useEffect, useState, useCallback, useRef } from "react";
 
 interface Track {
   playing: boolean;
-  title: string;
-  artist: string;
+  title: string | null;
+  artist: string | null;
   url: string;
   art?: string;
   progressMs?: number | null;
   durationMs?: number | null;
 }
-
-const DEFAULT_TRACK: Track = {
-  playing: false,
-  title: "TIT FOR TAT",
-  artist: "Tate McRae",
-  art: "https://i.scdn.co/image/ab67616d0000b273d0401a5b4ca2a799cd599abf",
-  url: "https://open.spotify.com/track/04a44cx2PJthIbN2aLMXhl",
-  progressMs: null,
-  durationMs: 177208,
-};
 
 /** The official Spotify mark. */
 export function SpotifyLogo({ className }: { className?: string }) {
@@ -33,17 +23,17 @@ export function SpotifyLogo({ className }: { className?: string }) {
 
 /**
  * Header brand slot (far left):
- * Displays all Spotify information on both mobile and desktop:
+ * Displays real-time Spotify information (100% genuine data, zero fake placeholders):
  * - Spinning vinyl album poster disc
  * - Live status indicator (Now playing / Recently played)
  * - Song title
  * - Artist name
  */
 export function SpotifyBrand() {
-  const [track, setTrack] = useState<Track | null>(DEFAULT_TRACK);
+  const [track, setTrack] = useState<Track | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Restore real played track from localStorage on mount so it never reverts to placeholders
+  // Restore the real last played track from localStorage on client load
   useEffect(() => {
     try {
       const saved = localStorage.getItem("shuv_spotify_track");
@@ -72,6 +62,7 @@ export function SpotifyBrand() {
 
       const data = await res.json();
       if (data && data.title) {
+        // Genuine track from Spotify!
         setTrack((prev) => {
           if (
             prev &&
@@ -81,7 +72,6 @@ export function SpotifyBrand() {
           ) {
             return prev;
           }
-          // Persist the verified track so it's remembered across reloads and idle times
           try {
             localStorage.setItem("shuv_spotify_track", JSON.stringify(data));
           } catch {
@@ -89,6 +79,9 @@ export function SpotifyBrand() {
           }
           return data;
         });
+      } else if (data && !data.title) {
+        // Spotify is idle and history is empty/throttled: retain real song marked as Recently played
+        setTrack((prev) => (prev ? { ...prev, playing: false } : null));
       }
     } catch {
       /* preserve existing track on transient network blip */
@@ -143,7 +136,7 @@ export function SpotifyBrand() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={track.art}
-            alt={track.title}
+            alt={track.title || "Album art"}
             className="size-full object-cover"
           />
           {/* Vinyl center hole */}
@@ -169,7 +162,7 @@ export function SpotifyBrand() {
     >
       {albumArtLogo}
 
-      {track && track.title && (
+      {track && track.title ? (
         <span className="flex min-w-0 max-w-[195px] flex-col gap-0.5 min-[390px]:max-w-[230px] sm:max-w-[270px] lg:max-w-[320px]">
           <span className="flex items-center gap-1.5">
             <span
@@ -190,6 +183,10 @@ export function SpotifyBrand() {
               {track.artist}
             </span>
           )}
+        </span>
+      ) : (
+        <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted">
+          <span>Spotify</span>
         </span>
       )}
     </div>

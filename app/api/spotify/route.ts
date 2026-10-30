@@ -35,29 +35,18 @@ interface SpotifyItemContainer {
 
 export interface TrackResponse {
   playing: boolean;
-  title: string;
-  artist: string;
+  title: string | null;
+  artist: string | null;
   art: string;
   url: string;
   progressMs: number | null;
   durationMs: number | null;
 }
 
-// Fallback track so widget is NEVER blank or empty even during rate-limits or cold starts
-const FALLBACK_RECENT_TRACK: TrackResponse = {
-  playing: false,
-  title: "TIT FOR TAT",
-  artist: "Tate McRae",
-  art: "https://i.scdn.co/image/ab67616d0000b273d0401a5b4ca2a799cd599abf",
-  url: "https://open.spotify.com/track/04a44cx2PJthIbN2aLMXhl",
-  progressMs: null,
-  durationMs: 177208,
-};
-
-let lastKnownTrack: TrackResponse = FALLBACK_RECENT_TRACK;
+let lastKnownTrack: TrackResponse | null = null;
 let lastRecentlyPlayedFetchAt = 0;
 let retryAfterUntil = 0;
-let cached: { at: number; body: TrackResponse } = { at: 0, body: FALLBACK_RECENT_TRACK };
+let cached: { at: number; body: TrackResponse | null } = { at: 0, body: null };
 let accessToken: string | null = null;
 let tokenExpiry = 0;
 
@@ -103,9 +92,9 @@ export async function GET() {
     return Response.json(
       {
         playing: true,
-        title: "Demo track — add your Spotify keys to go live",
+        title: "Demo track",
         artist: "Spotify widget preview",
-        art: "https://i.scdn.co/image/ab67616d0000b273e6095c382c2853667c1623eb",
+        art: "",
         url: "",
         progressMs: 61000,
         durationMs: 244000,
@@ -133,7 +122,7 @@ export async function GET() {
     const token = await getAccessToken(clientId, clientSecret, refreshToken);
     const headers = { Authorization: `Bearer ${token}` };
 
-    // 1. Check currently active/paused track in player first
+    // 1. Check currently active/paused track in player first (real-time live)
     const playingRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
       headers,
       cache: "no-store",
@@ -152,10 +141,9 @@ export async function GET() {
       }
     }
 
-    // 2. If idle (204 or no active track), check recently-played at most once every 60s
-    // to protect against Spotify rate-limits (HTTP 429)
+    // 2. If idle (204 or no active track), fetch real recently-played history from Spotify
     const now = Date.now();
-    if (now - lastRecentlyPlayedFetchAt > 60000 && now > retryAfterUntil) {
+    if (now - lastRecentlyPlayedFetchAt > 30000 && now > retryAfterUntil) {
       lastRecentlyPlayedFetchAt = now;
       try {
         const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=3", {
@@ -182,20 +170,33 @@ export async function GET() {
       }
     }
 
-    // Always serve the last verified track marked as idle/recently played (never empty!)
-    const idlePayload: TrackResponse = {
-      ...lastKnownTrack,
-      playing: false,
-      progressMs: null,
-    };
-    cached = { at: Date.now(), body: idlePayload };
+    // If we have a verified track from this session, serve it as Recently played
+    if (lastKnownTrack && lastKnownTrack.title) {
+      const idlePayload: TrackResponse = {
+        ...lastKnownTrack,
+        playing: false,
+        progressMs: null,
+      };
+      cached = { at: Date.now(), body: idlePayload };
+      return Response.json(idlePayload, { headers: NO_CACHE_HEADERS });
+    }
 
-    return Response.json(idlePayload, { headers: NO_CACHE_HEADERS });
+    // Genuinely no data available from Spotify right now (NEVER return fake placeholder songs)
+    const emptyPayload: TrackResponse = {
+      playing: false,
+      title: null,
+      artist: null,
+      art: "",
+      url: "",
+      progressMs: null,
+      durationMs: null,
+    };
+    cached = { at: Date.now(), body: emptyPayload };
+    return Response.json(emptyPayload, { headers: NO_CACHE_HEADERS });
   } catch (err) {
     console.error("Spotify API route error:", err);
-    // Even on error, serve the fallback track so the widget never looks broken
     return Response.json(
-      { ...lastKnownTrack, playing: false },
+      { playing: false, title: null, artist: null, art: "", url: "" },
       { headers: NO_CACHE_HEADERS }
     );
   }
