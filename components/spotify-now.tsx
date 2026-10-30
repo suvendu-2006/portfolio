@@ -7,6 +7,9 @@ interface Track {
   title: string;
   artist: string;
   url: string;
+  art?: string;
+  progressMs?: number | null;
+  durationMs?: number | null;
 }
 
 /** The official Spotify mark. */
@@ -19,11 +22,10 @@ export function SpotifyLogo({ className }: { className?: string }) {
 }
 
 /**
- * Header brand slot (far left): the Spotify logo plus a fixed-size,
- * two-line lockup — tiny label on top ("Recently played" / "Now playing"),
- * song name below. Clicking the whole lockup opens the track on Spotify.
- * Renders the logo alone until Spotify is connected
- * (see app/api/spotify/route.ts).
+ * Header brand slot (far left):
+ * When Spotify is active, displays the song's album poster inside a circular
+ * vinyl-style disc with a mini Spotify badge, plus real-time "Now playing" or
+ * "Recently played" song & artist info.
  */
 export function SpotifyBrand() {
   const [track, setTrack] = useState<Track | null>(null);
@@ -34,27 +36,59 @@ export function SpotifyBrand() {
     async function poll() {
       try {
         const res = await fetch("/api/spotify", { cache: "no-store" });
-        if (!res.ok) {
+        if (res.status === 501) {
           if (alive) setTrack(null);
           return;
         }
+        if (!res.ok) return;
+
         const data = await res.json();
-        if (alive) setTrack(data && data.title ? data : null);
+        if (alive && data && data.title) {
+          setTrack(data);
+        }
       } catch {
-        /* network hiccup — keep whatever we had */
+        /* network hiccup — preserve existing track state */
       }
     }
 
     poll();
-    const id = setInterval(poll, 45000);
+    const id = setInterval(poll, 15000);
     return () => {
       alive = false;
       clearInterval(id);
     };
   }, []);
 
-  const lockup = track ? (
-    <span className="flex w-36 flex-col gap-0.5 sm:w-44">
+  const albumArtLogo = (
+    <div className="relative size-8 shrink-0">
+      {track?.art ? (
+        <div
+          className={`relative size-8 overflow-hidden rounded-full border border-line bg-surface shadow-sm ${
+            track.playing ? "animate-[spin_8s_linear_infinite]" : ""
+          }`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={track.art}
+            alt={track.title}
+            className="size-full object-cover"
+          />
+          {/* Vinyl center hole */}
+          <span className="absolute inset-0 m-auto size-2 rounded-full border border-black/50 bg-bg" />
+        </div>
+      ) : (
+        <SpotifyLogo className="size-[22px] shrink-0" />
+      )}
+      {track?.art && (
+        <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-black ring-1 ring-bg">
+          <SpotifyLogo className="size-2.5" />
+        </span>
+      )}
+    </div>
+  );
+
+  const lockup = track && track.title ? (
+    <span className="flex max-w-[150px] flex-col gap-0.5 sm:max-w-[200px]">
       <span className="flex items-center gap-1.5">
         <span
           aria-hidden="true"
@@ -62,13 +96,18 @@ export function SpotifyBrand() {
             track.playing ? "bg-[#1db954] motion-safe:animate-pulse" : "bg-muted"
           }`}
         />
-        <span className="text-[8.5px] font-medium uppercase tracking-[0.18em] text-muted">
+        <span className="truncate text-[8.5px] font-medium uppercase tracking-[0.16em] text-muted">
           {track.playing ? "Now playing" : "Recently played"}
         </span>
       </span>
-      <span className="truncate text-[13px] font-semibold leading-tight text-ink">
+      <span className="truncate text-[12.5px] font-semibold leading-tight text-ink">
         {track.title}
       </span>
+      {track.artist && (
+        <span className="truncate text-[10.5px] leading-tight text-muted">
+          {track.artist}
+        </span>
+      )}
     </span>
   ) : null;
 
@@ -79,10 +118,10 @@ export function SpotifyBrand() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Open on Spotify: ${track.title} by ${track.artist}`}
-        title={`${track.title} — ${track.artist} · opens on Spotify`}
-        className="flex min-w-0 items-center gap-2.5 transition-opacity duration-300 hover:opacity-80"
+        title={`${track.title} — ${track.artist} · Click to open on Spotify`}
+        className="flex min-w-0 items-center gap-2.5 transition-opacity duration-200 hover:opacity-85"
       >
-        <SpotifyLogo className="size-[22px] shrink-0" />
+        {albumArtLogo}
         {lockup}
       </a>
     );
@@ -94,7 +133,7 @@ export function SpotifyBrand() {
       aria-label="Back to top"
       className="flex items-center gap-2.5"
     >
-      <SpotifyLogo className="size-[22px] shrink-0" />
+      {albumArtLogo}
       {lockup}
     </a>
   );

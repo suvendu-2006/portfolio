@@ -1,15 +1,13 @@
 /* ============================================================
-   /api/spotify — now-playing for the footer widget.
+   /api/spotify — now-playing for the header/footer widget.
 
    Set these env vars (Vercel → Settings → Environment Variables,
    or site/.env.local locally) and the widget appears:
      SPOTIFY_CLIENT_ID
      SPOTIFY_CLIENT_SECRET
      SPOTIFY_REFRESH_TOKEN
-   How to get them is documented in site/README.md.
 
-   Until then the route answers 501 and the widget stays hidden,
-   so the site never shows broken or placeholder data.
+   Until then the route answers 501 and the widget stays hidden.
    Set SPOTIFY_DEMO=1 to preview the widget with sample data.
    ============================================================ */
 
@@ -18,6 +16,28 @@ export const dynamic = "force-dynamic";
 let cached: { at: number; body: unknown } = { at: 0, body: null };
 let accessToken: string | null = null;
 let tokenExpiry = 0;
+
+interface SpotifyTrack {
+  name?: string;
+  artists?: { name: string }[];
+  album?: {
+    images?: { url: string }[];
+  };
+  external_urls?: {
+    spotify?: string;
+  };
+  duration_ms?: number;
+}
+
+interface SpotifyItemContainer {
+  track?: SpotifyTrack;
+  progress_ms?: number;
+  name?: string;
+  artists?: { name: string }[];
+  album?: { images?: { url: string }[] };
+  external_urls?: { spotify?: string };
+  duration_ms?: number;
+}
 
 async function getAccessToken(clientId: string, clientSecret: string, refreshToken: string) {
   if (accessToken && Date.now() < tokenExpiry) return accessToken;
@@ -40,24 +60,20 @@ async function getAccessToken(clientId: string, clientSecret: string, refreshTok
   return accessToken as string;
 }
 
-function mapTrack(item: {
-  track: {
-    name: string;
-    artists: { name: string }[];
-    album?: { images?: { url: string }[] };
-    external_urls?: { spotify?: string };
-    duration_ms?: number;
-  };
-  progress_ms?: number;
-}, playing: boolean) {
-  const t = item.track;
+function mapTrack(item: SpotifyItemContainer, playing: boolean, progressMs?: number) {
+  if (!item) return null;
+  // In currently-playing, item is the track directly.
+  // In recently-played, item has a .track property.
+  const t = item.track || item;
+  if (!t || !t.name) return null;
+
   return {
     playing,
     title: t.name,
-    artist: t.artists.map((a) => a.name).join(", "),
+    artist: Array.isArray(t.artists) ? t.artists.map((a) => a.name).join(", ") : "",
     art: t.album && t.album.images && t.album.images[0] ? t.album.images[0].url : "",
     url: t.external_urls ? t.external_urls.spotify ?? "" : "",
-    progressMs: playing ? item.progress_ms ?? null : null,
+    progressMs: playing ? (progressMs ?? item.progress_ms ?? null) : null,
     durationMs: playing && t.duration_ms ? t.duration_ms : null,
   };
 }
@@ -83,41 +99,52 @@ export async function GET() {
   }
 
   try {
-    // server-side cache — Spotify rate-limits the API
-    if (cached.body && Date.now() - cached.at < 45000) {
+    // server-side cache (10s) — fast updates without hitting Spotify rate-limits
+    if (cached.body && Date.now() - cached.at < 10000) {
       return Response.json(cached.body);
     }
 
     const token = await getAccessToken(clientId, clientSecret, refreshToken);
     const headers = { Authorization: `Bearer ${token}` };
 
-    // currently playing first…
-    let r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+    // 1. Check currently playing first
+    const playingRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
       headers,
       cache: "no-store",
     });
-    if (r.ok) {
-      const data = await r.json().catch(() => null);
+
+    if (playingRes.status === 200) {
+      const data = await playingRes.json().catch(() => null);
       if (data && data.item && data.is_playing) {
-        cached = { at: Date.now(), body: mapTrack(data.item, true) };
-        return Response.json(cached.body);
+        const mapped = mapTrack(data.item, true, data.progress_ms);
+        if (mapped) {
+          cached = { at: Date.now(), body: mapped };
+          return Response.json(cached.body);
+        }
       }
     }
 
-    // …fall back to last played
-    r = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=1", {
+    // 2. Fall back to recently played
+    const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=1", {
       headers,
       cache: "no-store",
     });
-    if (!r.ok) return Response.json({ error: "spotify_request_failed" }, { status: r.status });
-    const data = await r.json();
-    const item = data.items && data.items[0];
+
+    if (!recentRes.ok) {
+      return Response.json({ error: "spotify_request_failed" }, { status: recentRes.status });
+    }
+
+    const recentData = await recentRes.json();
+    const item = recentData.items && recentData.items[0];
+    const mapped = item ? mapTrack(item, false) : { playing: false, title: null, art: "" };
+
     cached = {
       at: Date.now(),
-      body: item ? mapTrack(item, false) : { playing: false, title: null },
+      body: mapped,
     };
     return Response.json(cached.body);
-  } catch {
+  } catch (err) {
+    console.error("Spotify API route error:", err);
     return Response.json({ error: "server_error" }, { status: 500 });
   }
 }

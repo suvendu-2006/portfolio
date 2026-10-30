@@ -168,7 +168,10 @@ footer {
 
 /* ------------------------------------------------------------
    Card shine — a light streak sweeps across the card image once
-   on hover (projects). Pure CSS, replays on every hover-in.
+   when the cursor enters anywhere on the card. The streak is
+   accent-tinted so it reads on light images (the SATARK dashboard
+   is mostly white — a plain white streak vanished on it) and on
+   dark ones alike. Pure CSS, replays on every hover-in.
    ------------------------------------------------------------ */
 .card-shine::after {
   content: "";
@@ -178,15 +181,16 @@ footer {
   pointer-events: none;
   background: linear-gradient(
     115deg,
-    transparent 32%,
-    rgb(255 255 255 / 0.12) 45%,
-    rgb(255 255 255 / 0.3) 50%,
-    rgb(255 255 255 / 0.12) 55%,
-    transparent 68%
+    transparent 30%,
+    rgb(var(--accent) / 0.1) 42%,
+    rgb(var(--accent) / 0.32) 50%,
+    rgb(var(--accent) / 0.1) 58%,
+    transparent 70%
   );
   transform: translateX(-130%) skewX(-12deg);
   opacity: 0;
 }
+.group:hover .card-shine::after,
 .card-shine:hover::after {
   animation: card-shine 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
@@ -199,4 +203,25 @@ footer {
     transform: translateX(130%) skewX(-12deg);
     opacity: 0;
   }
+}
+
+/* themed thin scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--line)) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--line));
+  border-radius: 8px;
+  border: 3px solid rgb(var(--bg));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--muted));
 }
