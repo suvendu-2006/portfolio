@@ -125,8 +125,8 @@ export async function GET() {
   }
 
   try {
-    // 2-second micro-cache to prevent duplicate hits from concurrent visitors
-    if (cached.body && Date.now() - cached.at < 2000) {
+    // 800ms micro-cache to prevent duplicate hits from simultaneous client events
+    if (cached.body && Date.now() - cached.at < 800) {
       return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
     }
 

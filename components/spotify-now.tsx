@@ -76,8 +76,8 @@ export function SpotifyBrand() {
 
   useEffect(() => {
     poll();
-    // Poll every 5s when active or 15s when idle (only while tab is actively visible)
-    const intervalTime = track?.playing ? 5000 : 15000;
+    // Fast near-instant sync: poll every 2s while playing, 2.5s while idle (only when tab is actively visible)
+    const intervalTime = track?.playing ? 2000 : 2500;
     const id = setInterval(() => {
       if (document.visibilityState === "visible") {
         poll();
@@ -135,6 +135,7 @@ export function SpotifyBrand() {
     <div
       ref={containerRef}
       onMouseEnter={poll}
+      onTouchStart={poll}
       className="relative flex min-w-0 shrink items-center gap-2 cursor-default select-none sm:shrink-0 sm:gap-2.5"
     >
       {albumArtLogo}
