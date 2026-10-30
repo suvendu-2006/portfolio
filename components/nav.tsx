@@ -131,11 +131,11 @@ export function Nav() {
         <AnimatePresence>
           {mobileMenuOpen && (
             <m.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="relative z-50 overflow-hidden border-b border-line bg-bg/95 backdrop-blur-2xl sm:hidden shadow-lg"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="relative z-50 border-b border-line bg-bg/95 backdrop-blur-2xl sm:hidden shadow-lg"
             >
               <nav aria-label="Mobile Navigation" className="flex flex-col gap-1 px-4 py-3">
                 {links.map((link, i) => {
