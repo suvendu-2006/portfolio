@@ -44,7 +44,7 @@ export const site = {
   college: "Trident Academy of Technology",
   branch: "B.Tech CSE (AI/ML)",
   /** TODO: add your production domain after the first Vercel deploy (used for sitemap/OG) */
-  url: "https://shuv-portfolio.vercel.app",
+  url: "https://shuv-ml.vercel.app",
 } as const;
 
 export const socials: Social[] = [
