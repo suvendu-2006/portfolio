@@ -101,7 +101,7 @@ export async function GET() {
   }
 
   try {
-    // 1-second micro-cache to prevent double-fetch while staying near instantaneous
+    // 1-second micro-cache to prevent duplicate concurrent hits
     if (cached.body && Date.now() - cached.at < 1000) {
       return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
     }
@@ -109,7 +109,7 @@ export async function GET() {
     const token = await getAccessToken(clientId, clientSecret, refreshToken);
     const headers = { Authorization: `Bearer ${token}` };
 
-    // 1. Check currently playing first
+    // 1. Check currently active/paused track in player first
     const playingRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
       headers,
       cache: "no-store",
@@ -117,37 +117,38 @@ export async function GET() {
 
     if (playingRes.status === 200) {
       const data = await playingRes.json().catch(() => null);
-      if (data && data.item && data.is_playing) {
-        const mapped = mapTrack(data.item, true, data.progress_ms);
-        if (mapped) {
+      if (data && data.item) {
+        const isPlaying = Boolean(data.is_playing);
+        const mapped = mapTrack(data.item, isPlaying, data.progress_ms);
+        if (mapped && mapped.title) {
           cached = { at: Date.now(), body: mapped };
           return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
         }
       }
     }
 
-    // 2. Fall back to recently played
-    const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=1", {
+    // 2. Fall back to playback history only if no active session in player (e.g. Spotify app was closed)
+    const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=5", {
       headers,
       cache: "no-store",
     });
 
-    if (!recentRes.ok) {
-      return Response.json(
-        { error: "spotify_request_failed" },
-        { status: recentRes.status, headers: NO_CACHE_HEADERS }
-      );
+    if (recentRes.ok) {
+      const recentData = await recentRes.json().catch(() => null);
+      const items = recentData?.items;
+      if (Array.isArray(items) && items.length > 0) {
+        const mapped = mapTrack(items[0], false);
+        if (mapped && mapped.title) {
+          cached = { at: Date.now(), body: mapped };
+          return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
+        }
+      }
     }
 
-    const recentData = await recentRes.json();
-    const item = recentData.items && recentData.items[0];
-    const mapped = item ? mapTrack(item, false) : { playing: false, title: null, art: "" };
-
-    cached = {
-      at: Date.now(),
-      body: mapped,
-    };
-    return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
+    return Response.json(
+      { playing: false, title: null, art: "" },
+      { headers: NO_CACHE_HEADERS }
+    );
   } catch (err) {
     console.error("Spotify API route error:", err);
     return Response.json({ error: "server_error" }, { status: 500, headers: NO_CACHE_HEADERS });
