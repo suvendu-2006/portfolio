@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface Track {
   playing: boolean;
@@ -30,34 +30,58 @@ export function SpotifyLogo({ className }: { className?: string }) {
 export function SpotifyBrand() {
   const [track, setTrack] = useState<Track | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-
-    async function poll() {
-      try {
-        const res = await fetch("/api/spotify", { cache: "no-store" });
-        if (res.status === 501) {
-          if (alive) setTrack(null);
-          return;
-        }
-        if (!res.ok) return;
-
-        const data = await res.json();
-        if (alive && data && data.title) {
-          setTrack(data);
-        }
-      } catch {
-        /* network hiccup — preserve existing track state */
+  const poll = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/spotify?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { Pragma: "no-cache" },
+      });
+      if (res.status === 501) {
+        setTrack(null);
+        return;
       }
-    }
+      if (!res.ok) return;
 
-    poll();
-    const id = setInterval(poll, 15000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
+      const data = await res.json();
+      if (data && data.title) {
+        setTrack((prev) => {
+          if (
+            prev &&
+            prev.title === data.title &&
+            prev.playing === data.playing &&
+            prev.art === data.art
+          ) {
+            return prev;
+          }
+          return data;
+        });
+      }
+    } catch {
+      /* preserve existing track on transient network blip */
+    }
   }, []);
+
+  useEffect(() => {
+    poll();
+    // Ultra-fast 2.5s polling for immediate song/pause synchronization
+    const id = setInterval(poll, 2500);
+
+    // Immediate sync when returning to the tab or focusing window
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        poll();
+      }
+    };
+
+    window.addEventListener("focus", onVisibilityOrFocus);
+    document.addEventListener("visibilitychange", onVisibilityOrFocus);
+
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", onVisibilityOrFocus);
+    };
+  }, [poll]);
 
   const albumArtLogo = (
     <div className="relative size-8 shrink-0">
@@ -117,6 +141,7 @@ export function SpotifyBrand() {
         href={track.url}
         target="_blank"
         rel="noopener noreferrer"
+        onMouseEnter={poll}
         aria-label={`Open on Spotify: ${track.title} by ${track.artist}`}
         title={`${track.title} — ${track.artist} · Click to open on Spotify`}
         className="flex min-w-0 items-center gap-2.5 transition-opacity duration-200 hover:opacity-85"
@@ -130,6 +155,7 @@ export function SpotifyBrand() {
   return (
     <a
       href="#main"
+      onMouseEnter={poll}
       aria-label="Back to top"
       className="flex items-center gap-2.5"
     >

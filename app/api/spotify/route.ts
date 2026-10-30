@@ -1,17 +1,15 @@
 /* ============================================================
-   /api/spotify — now-playing for the header/footer widget.
-
-   Set these env vars (Vercel → Settings → Environment Variables,
-   or site/.env.local locally) and the widget appears:
-     SPOTIFY_CLIENT_ID
-     SPOTIFY_CLIENT_SECRET
-     SPOTIFY_REFRESH_TOKEN
-
-   Until then the route answers 501 and the widget stays hidden.
-   Set SPOTIFY_DEMO=1 to preview the widget with sample data.
+   /api/spotify — real-time now-playing for the header/footer widget.
    ============================================================ */
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+  Pragma: "no-cache",
+  Expires: "0",
+};
 
 let cached: { at: number; body: unknown } = { at: 0, body: null };
 let accessToken: string | null = null;
@@ -62,8 +60,6 @@ async function getAccessToken(clientId: string, clientSecret: string, refreshTok
 
 function mapTrack(item: SpotifyItemContainer, playing: boolean, progressMs?: number) {
   if (!item) return null;
-  // In currently-playing, item is the track directly.
-  // In recently-played, item has a .track property.
   const t = item.track || item;
   if (!t || !t.name) return null;
 
@@ -80,28 +76,34 @@ function mapTrack(item: SpotifyItemContainer, playing: boolean, progressMs?: num
 
 export async function GET() {
   if (process.env.SPOTIFY_DEMO === "1") {
-    return Response.json({
-      playing: true,
-      title: "Demo track — add your Spotify keys to go live",
-      artist: "Spotify widget preview",
-      art: "",
-      url: "",
-      progressMs: 61000,
-      durationMs: 244000,
-    });
+    return Response.json(
+      {
+        playing: true,
+        title: "Demo track — add your Spotify keys to go live",
+        artist: "Spotify widget preview",
+        art: "",
+        url: "",
+        progressMs: 61000,
+        durationMs: 244000,
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
   }
 
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
   const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
   if (!clientId || !clientSecret || !refreshToken) {
-    return Response.json({ ok: false, error: "spotify_not_configured" }, { status: 501 });
+    return Response.json(
+      { ok: false, error: "spotify_not_configured" },
+      { status: 501, headers: NO_CACHE_HEADERS }
+    );
   }
 
   try {
-    // server-side cache (10s) — fast updates without hitting Spotify rate-limits
-    if (cached.body && Date.now() - cached.at < 10000) {
-      return Response.json(cached.body);
+    // 1-second micro-cache to prevent double-fetch while staying near instantaneous
+    if (cached.body && Date.now() - cached.at < 1000) {
+      return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
     }
 
     const token = await getAccessToken(clientId, clientSecret, refreshToken);
@@ -119,7 +121,7 @@ export async function GET() {
         const mapped = mapTrack(data.item, true, data.progress_ms);
         if (mapped) {
           cached = { at: Date.now(), body: mapped };
-          return Response.json(cached.body);
+          return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
         }
       }
     }
@@ -131,7 +133,10 @@ export async function GET() {
     });
 
     if (!recentRes.ok) {
-      return Response.json({ error: "spotify_request_failed" }, { status: recentRes.status });
+      return Response.json(
+        { error: "spotify_request_failed" },
+        { status: recentRes.status, headers: NO_CACHE_HEADERS }
+      );
     }
 
     const recentData = await recentRes.json();
@@ -142,9 +147,9 @@ export async function GET() {
       at: Date.now(),
       body: mapped,
     };
-    return Response.json(cached.body);
+    return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
   } catch (err) {
     console.error("Spotify API route error:", err);
-    return Response.json({ error: "server_error" }, { status: 500 });
+    return Response.json({ error: "server_error" }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }
