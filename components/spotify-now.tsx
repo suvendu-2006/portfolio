@@ -23,10 +23,11 @@ export function SpotifyLogo({ className }: { className?: string }) {
 
 /**
  * Header brand slot (far left):
- * Shows the song's album poster inside a circular spinning vinyl disc,
- * plus the real-time "Now playing" / "Recently played" title.
- * Designed with strict responsive max-widths to guarantee it never overlaps
- * with the navigation on any screen size (tested down to 320px).
+ * Displays all Spotify information on both mobile and desktop:
+ * - Spinning vinyl album poster disc
+ * - Live status indicator (Now playing / Recently played)
+ * - Song title
+ * - Artist name
  */
 export function SpotifyBrand() {
   const [track, setTrack] = useState<Track | null>(null);
@@ -123,7 +124,7 @@ export function SpotifyBrand() {
       {albumArtLogo}
 
       {track && track.title && (
-        <span className="flex min-w-0 max-w-[125px] flex-col gap-0.5 min-[390px]:max-w-[160px] sm:max-w-[200px] lg:max-w-[240px]">
+        <span className="flex min-w-0 max-w-[195px] flex-col gap-0.5 min-[390px]:max-w-[230px] sm:max-w-[270px] lg:max-w-[320px]">
           <span className="flex items-center gap-1.5">
             <span
               aria-hidden="true"
@@ -131,15 +132,15 @@ export function SpotifyBrand() {
                 track.playing ? "bg-[#1db954] motion-safe:animate-pulse" : "bg-muted"
               }`}
             />
-            <span className="truncate text-[8px] font-medium uppercase tracking-[0.16em] text-muted sm:text-[8.5px]">
+            <span className="truncate text-[8.5px] font-medium uppercase tracking-[0.16em] text-muted">
               {track.playing ? "Now playing" : "Recently played"}
             </span>
           </span>
-          <span className="truncate text-[11.5px] font-semibold leading-tight text-ink sm:text-[12.5px]">
+          <span className="truncate text-xs font-semibold leading-tight text-ink sm:text-[13px]">
             {track.title}
           </span>
           {track.artist && (
-            <span className="hidden truncate text-[10.5px] leading-tight text-muted sm:block">
+            <span className="truncate text-[10px] leading-tight text-muted sm:text-[11px]">
               {track.artist}
             </span>
           )}
