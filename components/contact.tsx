@@ -22,29 +22,9 @@ export function Contact() {
 
     if (!name || !senderEmail || !msgText) return;
 
-    // Guaranteed destination email (never exposed in static HTML)
-    const targetEmail = "iitsuvendu@gmail.com";
-    const subject = encodeURIComponent(`Portfolio message from ${name}`);
-    const body = encodeURIComponent(
-      `Name: ${name}\nEmail: ${senderEmail}\n\nMessage:\n${msgText}`
-    );
-    const directMailto = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
-
-    setMailtoUrl(directMailto);
     setState("sending");
-
-    // Trigger direct navigation immediately during user touch/click gesture
-    // to bypass mobile browser popup/redirect blockers
-    try {
-      const link = document.createElement("a");
-      link.href = directMailto;
-      link.rel = "noopener noreferrer";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch {
-      // Fallback button below ensures 100% reachability
-    }
+    setMessage("");
+    setMailtoUrl(null);
 
     try {
       const res = await fetch("/api/contact", {
@@ -58,18 +38,34 @@ export function Contact() {
       });
 
       const json = await res.json().catch(() => ({}));
-      setState("sent");
 
       if (res.ok && json.ok && json.deliveredViaApi) {
-        setMessage("Message sent directly — I'll get back to you soon.");
-        setMailtoUrl(null);
+        setState("sent");
+        setMessage("Message sent directly — I'll get back to you soon!");
         form.reset();
       } else {
-        setMessage("If your mail app didn't open automatically, tap below:");
+        setState("error");
+        setMessage(
+          json.message || "Couldn't send directly. You can send via mail app below:"
+        );
+        if (json.mailto) {
+          setMailtoUrl(json.mailto);
+        } else {
+          const subject = encodeURIComponent(`Portfolio message from ${name}`);
+          const body = encodeURIComponent(
+            `Name: ${name}\nEmail: ${senderEmail}\n\nMessage:\n${msgText}`
+          );
+          setMailtoUrl(`mailto:sahoosuvendukumar84@gmail.com?subject=${subject}&body=${body}`);
+        }
       }
     } catch {
-      setState("sent");
-      setMessage("If your mail app didn't open automatically, tap below:");
+      setState("error");
+      setMessage("Network error. You can send via your mail app directly:");
+      const subject = encodeURIComponent(`Portfolio message from ${name}`);
+      const body = encodeURIComponent(
+        `Name: ${name}\nEmail: ${senderEmail}\n\nMessage:\n${msgText}`
+      );
+      setMailtoUrl(`mailto:sahoosuvendukumar84@gmail.com?subject=${subject}&body=${body}`);
     }
   }
 
@@ -146,16 +142,21 @@ export function Contact() {
                 disabled={state === "sending"}
                 className="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-bg transition-transform hover:-translate-y-0.5 disabled:opacity-60"
               >
-                {state === "sending" ? "Preparing message…" : "Send message"}
+                {state === "sending" ? "Sending…" : "Send message"}
               </button>
 
               {message && (
-                <p aria-live="polite" className={`text-sm ${state === "error" ? "text-muted" : "text-ink"}`}>
+                <p
+                  aria-live="polite"
+                  className={`text-sm ${
+                    state === "sent" ? "text-accent font-medium" : "text-muted"
+                  }`}
+                >
                   {message}
                 </p>
               )}
 
-              {state === "sent" && mailtoUrl && (
+              {state === "error" && mailtoUrl && (
                 <a
                   href={mailtoUrl}
                   className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-3.5 text-center text-sm font-bold text-bg shadow-md transition-all hover:brightness-110 active:scale-95"
@@ -163,7 +164,7 @@ export function Contact() {
                   <svg className="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  Tap Here to Open Mail App &amp; Send
+                  Open Mail App to Send
                 </a>
               )}
             </form>

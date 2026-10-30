@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Resend } from "resend";
 
 export async function POST(req: Request) {
   const data = await req.json().catch(() => null);
@@ -13,50 +14,65 @@ export async function POST(req: Request) {
     );
   }
 
-  const toEmail = process.env.CONTACT_TO_EMAIL || "iitsuvendu@gmail.com";
+  const apiKey =
+    process.env.RESEND_API_KEY || "RESEND_API_KEY_REDACTED";
+  const toEmail =
+    process.env.CONTACT_TO_EMAIL || "sahoosuvendukumar84@gmail.com";
 
-  // If RESEND_API_KEY is configured in Vercel / environment, deliver directly via Resend API
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM_EMAIL || "Portfolio Contact <onboarding@resend.dev>",
-          to: toEmail,
-          reply_to: email,
-          subject: `Portfolio message from ${name}`,
-          text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
-        }),
-      });
+  try {
+    const resend = new Resend(apiKey);
 
-      if (res.ok) {
-        return NextResponse.json({
-          ok: true,
-          message: "Message sent — I'll get back to you soon.",
-        });
-      }
+    const { data: resData, error } = await resend.emails.send({
+      from: "Portfolio Contact <onboarding@resend.dev>",
+      to: [toEmail],
+      replyTo: email,
+      subject: `Portfolio message from ${name}`,
+      text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; rounded: 8px;">
+          <h2 style="color: #10b981; margin-top: 0;">New Message from Portfolio</h2>
+          <p style="margin: 8px 0;"><strong>Sender Name:</strong> ${name}</p>
+          <p style="margin: 8px 0;"><strong>Sender Email:</strong> <a href="mailto:${email}">${email}</a></p>
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+          <p style="margin-bottom: 6px;"><strong>Message:</strong></p>
+          <div style="background-color: #f9fafb; padding: 14px 18px; border-radius: 6px; border-left: 4px solid #10b981; white-space: pre-wrap; font-size: 15px; color: #1f2937;">${message}</div>
+          <p style="margin-top: 20px; font-size: 12px; color: #6b7280;">Hit "Reply" to reply directly to ${name} (${email}).</p>
+        </div>
+      `,
+    });
 
-      const err = await res.json().catch(() => null);
-      console.error("Resend error:", err);
-    } catch (err) {
-      console.error("Failed to send email via Resend:", err);
+    if (error) {
+      console.error("Resend API error:", error);
+      throw new Error(error.message);
     }
+
+    return NextResponse.json({
+      ok: true,
+      deliveredViaApi: true,
+      id: resData?.id,
+      message: "Message sent — I'll get back to you soon.",
+    });
+  } catch (err: unknown) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Failed to deliver message via API";
+    console.error("Failed to send email via Resend:", errorMessage);
+
+    // Fallback: mailto link for client if needed
+    const subject = `Portfolio message from ${name}`;
+    const body = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
+    const mailto = `mailto:${toEmail}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+
+    return NextResponse.json(
+      {
+        ok: false,
+        deliveredViaApi: false,
+        fallback: "mailto",
+        mailto,
+        message: "Couldn't send via mail server. Tap below to send via your mail app.",
+      },
+      { status: 500 }
+    );
   }
-
-  // Seamless fallback when RESEND_API_KEY is pending:
-  // Returns mailto payload so client can trigger direct mail compose to toEmail
-  const subject = `Portfolio message from ${name}`;
-  const body = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
-  const mailto = `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-  return NextResponse.json({
-    ok: true,
-    fallback: "mailto",
-    mailto,
-    message: "Opening your email app to complete sending to Suvendu...",
-  });
 }
