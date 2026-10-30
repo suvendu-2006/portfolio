@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark-first palette (RGB triplets so Tailwind opacity modifiers work) */
+:root {
+  --bg: 10 10 11;
+  --panel: 17 17 19;
+  --ink: 244 244 245;
+  --soft: 161 161 170;
+  --muted: 122 122 130;
+  --line: 39 39 42;
+  --accent: 95 189 170;
+}
+
+[data-theme="light"] {
+  --bg: 250 250 249;
+  --panel: 255 255 255;
+  --ink: 24 24 27;
+  --soft: 63 63 70;
+  --muted: 110 110 120;
+  --line: 228 228 231;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(var(--accent) / 0.9);
+  color: rgb(var(--bg));
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Aki-style letter matrix (hero) */
+.lm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(28px, 9vh, 84px);
+  pointer-events: none;
+}
+
+.lm-row {
+  display: flex;
+  gap: clamp(22px, 6.5vw, 96px);
+}
+
+.lm-letter {
+  font-family: var(--font-body);
+  font-size: clamp(15px, 2.6vmin, 24px);
+  color: rgb(var(--muted));
+  line-height: 1;
+  pointer-events: auto;
+  transition: color 0.4s ease, transform 0.4s ease;
+  user-select: none;
+}
+
+.lm-letter:hover {
+  color: rgb(var(--ink));
+  transform: translateY(-4px);
+}
+
+.lm-word {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(34px, 6.4vmin, 62px);
+  color: rgb(var(--ink));
+}
+
+@media (max-width: 640px) {
+  .lm {
+    gap: clamp(20px, 6vh, 44px);
+  }
+  .lm-row {
+    gap: clamp(12px, 4.5vw, 40px);
+  }
+  .lm-letter {
+    font-size: clamp(11px, 2vmin, 18px);
+  }
+  .lm-word {
+    font-size: clamp(26px, 5.2vmin, 44px);
+  }
+}
+
+/* theme circular reveal (View Transitions API) — the new theme sweeps out
+   from the toggle (clip-path animated in theme-toggle.tsx) while the old
+   theme dims and sinks beneath it */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+  animation: vt-dim-old 0.75s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+@keyframes vt-dim-old {
+  to {
+    transform: scale(0.985);
+    opacity: 0.55;
+  }
+}
+
+/* soft crossfade fallback for browsers without View Transitions */
+body,
+header,
+section,
+footer {
+  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+}
+
+/* ------------------------------------------------------------
+   Straight-line hover micro-animation — used sparingly, only in
+   the header (nav links + Spotify track link)
+   ------------------------------------------------------------ */
+.u-line {
+  position: relative;
+}
+.u-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--uline-gap, -4px);
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.u-line:hover::after,
+.u-line:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+.u-line-tight {
+  --uline-gap: 1px;
+}
+
+/* ------------------------------------------------------------
+   Card shine — a light streak sweeps across the card image once
+   on hover (projects). Pure CSS, replays on every hover-in.
+   ------------------------------------------------------------ */
+.card-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 32%,
+    rgb(255 255 255 / 0.12) 45%,
+    rgb(255 255 255 / 0.3) 50%,
+    rgb(255 255 255 / 0.12) 55%,
+    transparent 68%
+  );
+  transform: translateX(-130%) skewX(-12deg);
+  opacity: 0;
+}
+.card-shine:hover::after {
+  animation: card-shine 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes card-shine {
+  0% {
+    transform: translateX(-130%) skewX(-12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(130%) skewX(-12deg);
+    opacity: 0;
+  }
+}

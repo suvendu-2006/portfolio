@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" fill="#12101d"/>
+  <g fill="none" stroke="#2c2745" stroke-width="1.5">
+    <ellipse cx="600" cy="460" rx="430" ry="180"/>
+    <ellipse cx="600" cy="460" rx="430" ry="180" transform="rotate(60 600 460)"/>
+    <ellipse cx="600" cy="460" rx="430" ry="180" transform="rotate(-60 600 460)"/>
+  </g>
+  <g stroke="#4a4270" stroke-width="1.2">
+    <line x1="600" y1="460" x2="600" y2="280"/>
+    <line x1="600" y1="460" x2="772" y2="560"/>
+    <line x1="600" y1="460" x2="428" y2="560"/>
+    <line x1="600" y1="280" x2="772" y2="560"/>
+    <line x1="772" y1="560" x2="428" y2="560"/>
+    <line x1="428" y1="560" x2="600" y2="280"/>
+  </g>
+  <circle cx="600" cy="460" r="34" fill="#5fbdaa"/>
+  <circle cx="600" cy="460" r="52" fill="none" stroke="#5fbdaa" stroke-width="1.2" opacity="0.5"/>
+  <g>
+    <circle cx="600" cy="280" r="13" fill="#f4f2ec"/>
+    <circle cx="772" cy="560" r="13" fill="#f4f2ec"/>
+    <circle cx="428" cy="560" r="13" fill="#f4f2ec"/>
+    <circle cx="930" cy="380" r="8" fill="#8b7cf6"/>
+    <circle cx="270" cy="540" r="8" fill="#8b7cf6"/>
+    <circle cx="600" cy="640" r="8" fill="#8b7cf6"/>
+  </g>
+  <text x="120" y="140" font-family="Helvetica, Arial, sans-serif" font-size="15" letter-spacing="5" fill="#f4f2ec" opacity="0.55">ORBIT AI — MULTI-AGENT</text>
+  <g transform="translate(1020 120)">
+    <rect width="78" height="30" rx="15" fill="#5fbdaa"/>
+    <text x="39" y="20" font-family="Helvetica, Arial, sans-serif" font-size="12" letter-spacing="2" fill="#ffffff" text-anchor="middle">BETA</text>
+  </g>
+  <text x="120" y="820" font-family="Georgia, serif" font-size="38" fill="#f4f2ec" font-style="italic">agents in formation</text>
+</svg>
