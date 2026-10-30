@@ -76,9 +76,13 @@ export function SpotifyBrand() {
 
   useEffect(() => {
     poll();
-    // Poll every 5s when active or 12s when idle
-    const intervalTime = track?.playing ? 5000 : 12000;
-    const id = setInterval(poll, intervalTime);
+    // Poll every 5s when active or 15s when idle (only while tab is actively visible)
+    const intervalTime = track?.playing ? 5000 : 15000;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        poll();
+      }
+    }, intervalTime);
 
     const onVisibilityOrFocus = () => {
       if (document.visibilityState === "visible") {

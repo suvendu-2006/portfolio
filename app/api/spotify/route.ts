@@ -56,6 +56,7 @@ const FALLBACK_RECENT_TRACK: TrackResponse = {
 
 let lastKnownTrack: TrackResponse = FALLBACK_RECENT_TRACK;
 let lastRecentlyPlayedFetchAt = 0;
+let retryAfterUntil = 0;
 let cached: { at: number; body: TrackResponse } = { at: 0, body: FALLBACK_RECENT_TRACK };
 let accessToken: string | null = null;
 let tokenExpiry = 0;
@@ -154,7 +155,7 @@ export async function GET() {
     // 2. If idle (204 or no active track), check recently-played at most once every 60s
     // to protect against Spotify rate-limits (HTTP 429)
     const now = Date.now();
-    if (now - lastRecentlyPlayedFetchAt > 60000) {
+    if (now - lastRecentlyPlayedFetchAt > 60000 && now > retryAfterUntil) {
       lastRecentlyPlayedFetchAt = now;
       try {
         const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=3", {
@@ -171,6 +172,10 @@ export async function GET() {
               lastKnownTrack = mapped;
             }
           }
+        } else if (recentRes.status === 429) {
+          const retryHeader = recentRes.headers.get("retry-after");
+          const retrySec = retryHeader ? parseInt(retryHeader, 10) : 3600;
+          retryAfterUntil = now + retrySec * 1000;
         }
       } catch {
         // preserve lastKnownTrack
