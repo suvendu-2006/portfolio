@@ -14,12 +14,12 @@ interface Track {
 
 const INITIAL_TRACK: Track = {
   playing: false,
-  title: "Señorita",
-  artist: "Shawn Mendes, Camila Cabello",
-  art: "https://i.scdn.co/image/ab67616d0000b273e6095c382c2853667c1623eb",
-  url: "https://open.spotify.com/track/0TK2YIli7K1leLovkQiNik",
+  title: "TIT FOR TAT",
+  artist: "Tate McRae",
+  art: "https://i.scdn.co/image/ab67616d0000b273d0401a5b4ca2a799cd599abf",
+  url: "https://open.spotify.com/track/04a44cx2PJthIbN2aLMXhl",
   progressMs: null,
-  durationMs: 190960,
+  durationMs: 177208,
 };
 
 /** The official Spotify mark. */
@@ -66,11 +66,31 @@ export function SpotifyBrand() {
           ) {
             return prev;
           }
+          try {
+            localStorage.setItem("shuv_last_played_track", JSON.stringify(data));
+          } catch {
+            /* localStorage quota / private mode */
+          }
           return data;
         });
       }
     } catch {
       /* preserve existing track on transient network blip */
+    }
+  }, []);
+
+  // Restore the user's actual last played track from localStorage on page load
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("shuv_last_played_track");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.title) {
+          setTrack((current) => (current?.playing ? current : { ...parsed, playing: false }));
+        }
+      }
+    } catch {
+      /* ignore */
     }
   }, []);
 

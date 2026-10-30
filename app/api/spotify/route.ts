@@ -46,12 +46,12 @@ export interface TrackResponse {
 // Fallback track so widget is NEVER blank or empty even during rate-limits or cold starts
 const FALLBACK_RECENT_TRACK: TrackResponse = {
   playing: false,
-  title: "Señorita",
-  artist: "Shawn Mendes, Camila Cabello",
-  art: "https://i.scdn.co/image/ab67616d0000b273e6095c382c2853667c1623eb",
-  url: "https://open.spotify.com/track/0TK2YIli7K1leLovkQiNik",
+  title: "TIT FOR TAT",
+  artist: "Tate McRae",
+  art: "https://i.scdn.co/image/ab67616d0000b273d0401a5b4ca2a799cd599abf",
+  url: "https://open.spotify.com/track/04a44cx2PJthIbN2aLMXhl",
   progressMs: null,
-  durationMs: 190960,
+  durationMs: 177208,
 };
 
 let lastKnownTrack: TrackResponse = FALLBACK_RECENT_TRACK;
