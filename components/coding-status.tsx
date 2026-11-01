@@ -23,7 +23,7 @@ interface PushState {
  * Live developer status — displays real editor work time
  * alongside shipping activity from GitHub.
  *
- * Polled regularly without any placeholder or fake states.
+ * Polled regularly without placeholder or fake states.
  */
 export function CodingStatus() {
   const [waka, setWaka] = useState<WakaState | null>(null);
@@ -108,34 +108,15 @@ export function CodingStatus() {
     <div className="flex flex-wrap items-stretch gap-3">
       {showWaka ? (
         <div className="inline-flex min-w-[210px] flex-col justify-between gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-3.5 sm:px-5 sm:py-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
             <span
-              className={`size-2 rounded-full ${
+              className={`size-2 shrink-0 rounded-full ${
                 waka.activeNow
                   ? "animate-pulse bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
                   : "bg-emerald-500/80"
               }`}
               aria-hidden="true"
             />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink">
-              {waka.activeNow ? "Coding now" : "Coded today"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-4 shrink-0 text-accent"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="16 18 22 12 16 6" />
-              <polyline points="8 6 2 12 8 18" />
-            </svg>
             <span className="font-display text-base font-bold text-ink">
               {waka.totalText}
             </span>
@@ -152,9 +133,9 @@ export function CodingStatus() {
 
       {showGithub ? (
         <div className="inline-flex min-w-[210px] flex-col justify-between gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-3.5 sm:px-5 sm:py-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
             <span
-              className={`size-2 rounded-full ${
+              className={`size-2 shrink-0 rounded-full ${
                 github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 3
                   ? "animate-pulse bg-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.6)]"
                   : github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 24
@@ -163,30 +144,6 @@ export function CodingStatus() {
               }`}
               aria-hidden="true"
             />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink">
-              {github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 3
-                ? "Shipping now"
-                : github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 24
-                  ? "Shipped today"
-                  : github.lastPushHoursAgo !== null
-                    ? `Last push ${Math.round(github.lastPushHoursAgo)}h ago`
-                    : "On GitHub"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-4 shrink-0 text-accent"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="8.5" />
-              <path d="M12 7.5V12l3 2" />
-            </svg>
             <span className="font-display text-base font-bold text-ink">
               {github.pushesWeek} {github.pushesWeek === 1 ? "push" : "pushes"}
             </span>
