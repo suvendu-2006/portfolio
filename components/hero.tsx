@@ -84,6 +84,20 @@ export function Hero() {
       >
         {`${site.branch} · ${site.college} · ${site.location}`}
       </p>
+
+      {/* scroll hint — a dot forever travelling down the line */}
+      <div
+        aria-hidden="true"
+        className="hero-in absolute inset-x-0 bottom-5 flex flex-col items-center gap-2"
+        style={at("1.15s")}
+      >
+        <span className="text-[9px] font-medium uppercase tracking-[0.32em] text-muted">
+          scroll
+        </span>
+        <span className="relative block h-10 w-px overflow-hidden bg-line">
+          <span className="absolute inset-x-0 top-0 h-4 animate-[scrollhint_2.2s_cubic-bezier(0.65,0,0.35,1)_infinite] bg-accent" />
+        </span>
+      </div>
     </section>
   );
 }

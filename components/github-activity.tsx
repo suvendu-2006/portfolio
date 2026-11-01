@@ -267,27 +267,23 @@ export function GithubActivity() {
                     {(days.length ? weeks : Array.from({ length: 52 }, () => Array(7).fill(null))).map(
                       (week, w) =>
                         week.map((day, d) => {
-                          const key = `${w}-${d}`;
+                          const key = `${year}-${w}-${d}`;
                           const delay = instant ? 0 : Math.min(w * 14 + d * 8, 850);
                           if (!day)
                             return (
                               <span
                                 key={key}
-                                className={`transition-[opacity,transform] duration-300 ease-out ${
-                                  shown ? "scale-100 opacity-100" : "scale-50 opacity-0"
-                                }`}
-                                style={{ transitionDelay: `${delay}ms` }}
+                                className="animate-[cell-in_.35s_cubic-bezier(0.22,1,0.36,1)_both] rounded-[3px]"
+                                style={{ width: CELL, height: CELL, animationDelay: `${delay}ms` }}
                               >
-                                <span className="block rounded-[3px]" style={{ width: CELL, height: CELL }} />
+                                <span className="block" style={{ width: CELL, height: CELL }} />
                               </span>
                             );
                           return (
                             <span
                               key={key}
-                              className={`transition-[opacity,transform] duration-300 ease-out ${
-                                shown ? "scale-100 opacity-100" : "scale-50 opacity-0"
-                              }`}
-                              style={{ transitionDelay: `${delay}ms` }}
+                              className="animate-[cell-in_.35s_cubic-bezier(0.22,1,0.36,1)_both]"
+                              style={{ width: CELL, height: CELL, animationDelay: `${delay}ms` }}
                             >
                               <span
                                 onMouseEnter={(e) => showTooltip(day, e.currentTarget)}

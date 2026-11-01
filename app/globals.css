@@ -443,3 +443,38 @@ html[data-intro="done"] .hero-frame {
     transform: translateX(130%) skewX(-12deg);
   }
 }
+
+/* project screenshots sit in grayscale until the cursor finds them —
+   pointer devices only, touch always sees full color */
+@media (hover: hover) and (pointer: fine) {
+  .project-media {
+    filter: grayscale(1) contrast(1.03);
+    transition: filter 0.6s ease;
+  }
+  .group:hover .project-media,
+  .group:focus-visible .project-media {
+    filter: grayscale(0) contrast(1);
+  }
+}
+
+/* hero scroll hint — a dot travels down the line, forever */
+@keyframes scrollhint {
+  0% {
+    transform: translateY(-120%);
+  }
+  100% {
+    transform: translateY(320%);
+  }
+}
+
+/* calendar cells cascade on every mount (data load, month change) */
+@keyframes cell-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
