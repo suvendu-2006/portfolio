@@ -139,9 +139,9 @@ export function Projects() {
                           }
                         }}
                         className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[11px] font-semibold text-accent transition-colors hover:bg-accent hover:text-bg"
-                        title={`Open ${project.name} prototype`}
+                        title={`Visit ${project.name}`}
                       >
-                        Live prototype ↗
+                        Visit ↗
                       </span>
                     ) : null}
                   </div>
@@ -203,7 +203,7 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block size-full"
-                  title={`Open ${project.name} live prototype`}
+                  title={`Visit ${project.name}`}
                 >
                   <m.div
                     className="absolute inset-0"
@@ -220,7 +220,7 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
                     />
                   </m.div>
                   <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-bg/90 px-3 py-1 text-xs font-semibold text-ink backdrop-blur shadow-sm transition-colors group-hover:border-accent group-hover:text-accent">
-                    <span>Open prototype</span>
+                    <span>Visit</span>
                     <span aria-hidden="true">↗</span>
                   </span>
                 </a>
@@ -324,7 +324,7 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
                   >
-                    <span>Open live prototype</span>
+                    <span>Visit</span>
                     <span aria-hidden="true">↗</span>
                   </a>
                 ) : null}

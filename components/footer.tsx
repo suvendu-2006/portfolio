@@ -1,3 +1,5 @@
+"use client";
+
 import { site, socials } from "@/data/content";
 import { LocalTime } from "@/components/local-time";
 import { FooterWordmark } from "@/components/footer-wordmark";
@@ -36,6 +38,15 @@ export function Footer() {
           </ul>
           <div className="flex items-center gap-2">
             <LocalTime />
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("shuv:open-terminal"))}
+              aria-label="Open terminal"
+              title="Open terminal"
+              className="inline-block px-2 py-2 font-mono text-muted transition-colors hover:text-accent"
+            >
+              ~
+            </button>
             <a href="#main" className="inline-block px-2 py-2 transition-colors hover:text-ink">
               Back to top ↑
             </a>
