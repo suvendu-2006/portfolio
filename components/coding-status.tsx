@@ -2,42 +2,46 @@
 
 import { useEffect, useState } from "react";
 
-interface WakaState {
-  totalText: string;
-  activeNow: boolean;
-  topProject: string | null;
+interface PushState {
+  pushesWeek: number;
+  commitsWeek: number;
+  lastPushHoursAgo: number | null;
+  lastPushRepo: string | null;
 }
 
 /**
- * "Coded today" status card — real editor time from WakaTime, polled
- * every two minutes. Hides itself entirely until WAKATIME_API_KEY is
- * configured (no fake states).
+ * Live shipping status — real push activity from GitHub's public
+ * events, polled every five minutes. States derive from the data:
+ * shipping now (recent push) / pushed today / quiet day.
  */
 export function CodingStatus() {
-  const [state, setState] = useState<WakaState | null>(null);
+  const [state, setState] = useState<PushState | null>(null);
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
       try {
-        const res = await fetch("/api/wakatime");
-        if (res.status === 501) {
+        const res = await fetch("/api/github-events");
+        if (!res.ok) {
           if (alive) setHidden(true);
           return;
         }
         const d = await res.json();
         if (!alive) return;
-        if (d.totalText) {
-          setState({ totalText: d.totalText, activeNow: !!d.activeNow, topProject: d.topProject ?? null });
-          setHidden(false);
-        }
+        setState({
+          pushesWeek: d.pushesWeek ?? 0,
+          commitsWeek: d.commitsWeek ?? 0,
+          lastPushHoursAgo: d.lastPushHoursAgo ?? null,
+          lastPushRepo: d.lastPushRepo ?? null,
+        });
+        setHidden(false);
       } catch {
-        /* keep the last state; transient network blips shouldn't hide the card */
+        /* keep last state on transient blips */
       }
     };
     load();
-    const id = window.setInterval(load, 120000);
+    const id = window.setInterval(load, 300000);
     return () => {
       alive = false;
       window.clearInterval(id);
@@ -46,17 +50,29 @@ export function CodingStatus() {
 
   if (hidden || !state) return null;
 
+  const { pushesWeek, commitsWeek, lastPushHoursAgo, lastPushRepo } = state;
+  const shippingNow = lastPushHoursAgo !== null && lastPushHoursAgo < 3;
+  const shippedToday = lastPushHoursAgo !== null && lastPushHoursAgo < 24;
+
+  const label = shippingNow
+    ? "Shipping now"
+    : shippedToday
+      ? "Shipped today"
+      : lastPushHoursAgo !== null
+        ? `Last push ${Math.round(lastPushHoursAgo)}h ago`
+        : "On GitHub";
+
   return (
     <div className="inline-flex flex-col gap-2.5 rounded-xl border border-line bg-panel/90 px-5 py-4">
       <div className="flex items-center gap-2.5">
         <span
           className={`size-2 rounded-full ${
-            state.activeNow ? "animate-pulse bg-accent" : "bg-muted"
+            shippingNow ? "animate-pulse bg-accent" : shippedToday ? "bg-accent/60" : "bg-muted"
           }`}
           aria-hidden="true"
         />
         <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink">
-          {state.activeNow ? "Coding now" : "Off the keys"}
+          {label}
         </span>
       </div>
       <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
@@ -64,12 +80,14 @@ export function CodingStatus() {
           <circle cx="12" cy="12" r="8.5" />
           <path d="M12 7.5V12l3 2" />
         </svg>
-        <span className="font-display text-base font-bold text-ink">{state.totalText}</span>
-        <span className="text-xs text-muted">coded today</span>
+        <span className="font-display text-base font-bold text-ink">
+          {pushesWeek} {pushesWeek === 1 ? "push" : "pushes"}
+        </span>
+        <span className="text-xs text-muted">this week on GitHub</span>
       </div>
-      {state.topProject ? (
+      {lastPushRepo ? (
         <p className="text-[11px] text-muted">
-          mostly on <span className="font-medium text-soft">{state.topProject}</span>
+          last push on <span className="font-medium text-soft">{lastPushRepo}</span>
         </p>
       ) : null}
     </div>
