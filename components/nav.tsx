@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m, useScroll } from "framer-motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SpotifyBrand } from "@/components/spotify-now";
@@ -38,8 +38,11 @@ export function Nav() {
   }, [mobileMenuOpen]);
 
   // highlight the nav link of the section currently on screen
+  // (rAF-throttled — one rect pass per frame max)
   useEffect(() => {
-    const onScroll = () => {
+    let raf = 0;
+    const measure = () => {
+      raf = 0;
       const line = window.innerHeight * 0.4;
       let current = "";
       for (const { href } of links) {
@@ -48,9 +51,15 @@ export function Nav() {
       }
       setActive(current);
     };
-    onScroll();
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(measure);
+    };
+    measure();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, []);
 
   // Close mobile menu on resize to desktop
@@ -89,7 +98,7 @@ export function Nav() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 border-b border-line bg-bg/90 backdrop-blur-md transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`fixed inset-x-0 top-0 z-50 border-b border-line bg-bg/90 backdrop-blur-sm sm:backdrop-blur-md transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           hidden ? "-translate-y-full" : "translate-y-0"
         }`}
       >

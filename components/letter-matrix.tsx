@@ -108,26 +108,41 @@ export function LetterMatrix({
       cleanupTimers.push(ambient);
     }
 
-    // mouse parallax — rows drift at opposite depths, lerped
+    // mouse parallax — rows drift at opposite depths, lerped.
+    // The loop stops itself when the values settle or the hero scrolls
+    // off-screen — it never burns frames for nothing.
     let removeParallax: (() => void) | null = null;
     if (!reduced && window.matchMedia("(pointer: fine)").matches) {
       const rowEls = Array.from(container.children) as HTMLElement[];
       const depthFor = (i: number) =>
         (i - (rows - 1) / 2) / ((rows - 1) / 2 || 1); // -1 … 1 by row
       let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
-      const loop = () => {
-        cx += (tx - cx) * 0.06;
-        cy += (ty - cy) * 0.06;
+      const apply = () => {
         rowEls.forEach((row, i) => {
           const d = depthFor(i);
           row.style.transform = `translate3d(${(cx * 14 * d).toFixed(2)}px, ${(cy * 8 * Math.abs(d)).toFixed(2)}px, 0)`;
         });
+      };
+      const loop = () => {
+        cx += (tx - cx) * 0.06;
+        cy += (ty - cy) * 0.06;
+        apply();
+        if (Math.abs(tx - cx) < 0.001 && Math.abs(ty - cy) < 0.001) {
+          cx = tx;
+          cy = ty;
+          raf = 0; // settled — stop the loop until the pointer moves again
+          return;
+        }
         raf = requestAnimationFrame(loop);
+      };
+      const wake = () => {
+        if (!raf) raf = requestAnimationFrame(loop);
       };
       const onMove = (e: PointerEvent) => {
         tx = (e.clientX / window.innerWidth - 0.5) * 2;
         ty = (e.clientY / window.innerHeight - 0.5) * 2;
-        if (!raf) loop();
+        // skip all work while the hero is off-screen
+        if (container.getBoundingClientRect().bottom > 0) wake();
       };
       window.addEventListener("pointermove", onMove, { passive: true });
       removeParallax = () => {

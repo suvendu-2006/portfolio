@@ -117,18 +117,10 @@ export function SpotifyBrand() {
         await poll();
       }
       if (active) {
-        const current = trackRef.current;
-        // Low-latency polling: 1500ms when playing, 2500ms when idle/paused
-        let delay = current?.playing ? 1500 : 2500;
-
-        // If the current track is about to finish, snap polling to track end
-        if (current?.playing && current.durationMs && current.progressMs) {
-          const remaining = current.durationMs - current.progressMs;
-          if (remaining > 200 && remaining < delay) {
-            delay = remaining + 200;
-          }
-        }
-
+        // track changes are minute-scale — poll gently, refresh instantly
+        // on tab focus/visibility (already wired below)
+        const playing = trackRef.current?.playing;
+        const delay = playing ? 30000 : 45000;
         timerId = setTimeout(tick, delay);
       }
     };
