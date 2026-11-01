@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { githubUser } from "@/data/content";
 import { HairLine } from "@/components/hairline";
 import { MaskReveal } from "@/components/mask-reveal";
@@ -24,6 +24,22 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 const CELL = 11;
 const GAP = 3;
 
+function formatDayDate(dateStr: string) {
+  try {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(date);
+  } catch {
+    return dateStr;
+  }
+}
+
 /**
  * Live GitHub contribution calendar — a year of commits pulled from
  * the public GitHub API (cached server-side for an hour), rendered in
@@ -32,6 +48,31 @@ const GAP = 3;
 export function GithubActivity() {
   const [data, setData] = useState<{ total: number; days: Day[] } | null>(null);
   const [failed, setFailed] = useState(false);
+  const [tooltip, setTooltip] = useState<{
+    day: Day;
+    x: number;
+    y: number;
+    flipBelow: boolean;
+  } | null>(null);
+  const gridWrapperRef = useRef<HTMLDivElement>(null);
+
+  const showTooltip = (day: Day, el: HTMLElement) => {
+    const container = gridWrapperRef.current;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+
+    const centerX = elRect.left - containerRect.left + elRect.width / 2;
+    const topY = elRect.top - containerRect.top;
+    const flipBelow = topY < 48;
+
+    setTooltip({
+      day,
+      x: centerX,
+      y: flipBelow ? topY + elRect.height + 6 : topY - 6,
+      flipBelow,
+    });
+  };
 
   useEffect(() => {
     // the API route caches upstream for an hour, so fetching on mount is
@@ -144,7 +185,12 @@ export function GithubActivity() {
               </p>
 
               <div className="scroll-contain mt-5 overflow-x-auto pb-1 [scrollbar-width:thin]">
-                <div style={{ width: columns * (CELL + GAP) }}>
+                <div
+                  ref={gridWrapperRef}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ width: columns * (CELL + GAP) }}
+                  className="relative select-none"
+                >
                   {/* month labels */}
                   <div
                     className="mb-1.5 grid text-left text-[10px] font-medium text-muted"
@@ -177,20 +223,43 @@ export function GithubActivity() {
                           return (
                             <span
                               key={key}
-                              title={
-                                day.count
-                                  ? `${day.count} contribution${day.count > 1 ? "s" : ""} on ${day.date}`
-                                  : `No contributions on ${day.date}`
-                              }
-                              className={`rounded-[3px] transition-colors duration-200 ${
+                              onMouseEnter={(e) => showTooltip(day, e.currentTarget)}
+                              onTouchStart={(e) => showTooltip(day, e.currentTarget)}
+                              className={`rounded-[3px] transition-all duration-150 cursor-pointer ${
                                 data ? LEVEL_BG[Math.min(day.level, 4)] : "bg-line/40"
-                              }`}
+                              } hover:scale-125 hover:ring-2 hover:ring-accent hover:z-20`}
                               style={{ width: CELL, height: CELL }}
                             />
                           );
                         })
                     )}
                   </div>
+
+                  {/* interactive floating commit tooltip */}
+                  {tooltip && (
+                    <div
+                      className={`pointer-events-none absolute z-30 transition-transform duration-75 ease-out ${
+                        tooltip.flipBelow ? "-translate-x-1/2 translate-y-0" : "-translate-x-1/2 -translate-y-full"
+                      }`}
+                      style={{
+                        left: Math.max(75, Math.min(columns * (CELL + GAP) - 75, tooltip.x)),
+                        top: tooltip.y,
+                      }}
+                    >
+                      <div className="whitespace-nowrap rounded-lg border border-line bg-panel/95 px-3 py-1.5 shadow-2xl backdrop-blur-md">
+                        <p className="text-xs font-semibold leading-tight text-ink">
+                          <span className={tooltip.day.count > 0 ? "text-accent font-bold" : "text-muted"}>
+                            {tooltip.day.count === 0
+                              ? "No commits"
+                              : `${tooltip.day.count} ${tooltip.day.count === 1 ? "commit" : "commits"}`}
+                          </span>
+                        </p>
+                        <p className="mt-0.5 text-[11px] leading-tight text-soft">
+                          on {formatDayDate(tooltip.day.date)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
