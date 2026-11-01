@@ -197,49 +197,32 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="group relative aspect-[16/9] w-full overflow-hidden border-b border-line sm:aspect-[21/9]">
+              <m.div
+                className="absolute inset-0"
+                initial={reduced ? false : { scale: 1.08 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Image
+                  src={project.image.src}
+                  alt={project.image.alt}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </m.div>
               {project.live ? (
                 <a
                   href={project.live}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block size-full"
+                  className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-bg/90 px-3 py-1 text-xs font-semibold text-ink backdrop-blur shadow-sm transition-colors group-hover:border-accent group-hover:text-accent"
                   title={`Visit ${project.name}`}
                 >
-                  <m.div
-                    className="absolute inset-0"
-                    initial={reduced ? false : { scale: 1.08 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                  >
-                    <Image
-                      src={project.image.src}
-                      alt={project.image.alt}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 768px"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </m.div>
-                  <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-bg/90 px-3 py-1 text-xs font-semibold text-ink backdrop-blur shadow-sm transition-colors group-hover:border-accent group-hover:text-accent">
-                    <span>Visit</span>
-                    <span aria-hidden="true">↗</span>
-                  </span>
+                  <span>Visit</span>
+                  <span aria-hidden="true">↗</span>
                 </a>
-              ) : (
-                <m.div
-                  className="absolute inset-0"
-                  initial={reduced ? false : { scale: 1.08 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <Image
-                    src={project.image.src}
-                    alt={project.image.alt}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 768px"
-                    className="object-cover"
-                  />
-                </m.div>
-              )}
+              ) : null}
               <button
                 ref={closeRef}
                 type="button"
