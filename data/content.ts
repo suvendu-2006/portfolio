@@ -53,6 +53,9 @@ export const socials: Social[] = [
   { label: "GitHub", href: "https://github.com/suvendu-2006" },
 ];
 
+/** GitHub username for the live activity calendar */
+export const githubUser = "suvendu-2006";
+
 /**
  * TODO: set your public email (or wire the contact form via /api/contact —
  * see that file). While null, the email button stays hidden.
