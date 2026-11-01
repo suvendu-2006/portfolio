@@ -165,9 +165,13 @@ export function ConnectWithMe() {
      circle → clicking "Connect with me" slides the two circles together
      and opens the scheduler */
   const [visitorName, setVisitorName] = useState("");
+  const [visitorEmail, setVisitorEmail] = useState("");
+  const [bookingStatus, setBookingStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState("");
   const [connected, setConnected] = useState(false);
   const [asking, setAsking] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
   const connectTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -176,6 +180,10 @@ export function ConnectWithMe() {
       if (saved) {
         setVisitorName(saved);
         setConnected(true);
+      }
+      const savedEmail = sessionStorage.getItem("shuv-visitor-email");
+      if (savedEmail) {
+        setVisitorEmail(savedEmail);
       }
     } catch {}
     return () => {
@@ -202,6 +210,8 @@ export function ConnectWithMe() {
     setView({ y: t.getUTCFullYear(), m: t.getUTCMonth() });
     setSelYmd(null);
     setSelSlot(null);
+    setBookingStatus("idle");
+    setStatusMessage("");
     setOpen(true);
   };
 
@@ -212,6 +222,8 @@ export function ConnectWithMe() {
     setVisitorName("");
     setConnected(false);
     setAsking(false);
+    setBookingStatus("idle");
+    setStatusMessage("");
     try {
       sessionStorage.removeItem("shuv-visitor");
     } catch {}
@@ -279,9 +291,61 @@ export function ConnectWithMe() {
       ? `Hi Suvendu! I'm ${visitorName.trim()} — found you via your portfolio. Are you free for a quick call?`
       : "Hi Suvendu! Found you via your portfolio — are you free for a quick call?"
   );
-  const whatsappHref = booking.whatsapp
-    ? `https://wa.me/${booking.whatsapp}?text=${whatsappText}`
-    : `mailto:${booking.email}?subject=${encodeURIComponent("WhatsApp — send me your number")}`;
+
+  const rawWhatsapp = booking.whatsapp || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
+  const cleanWhatsapp = rawWhatsapp.replace(/[^0-9]/g, "");
+  const whatsappHref = cleanWhatsapp
+    ? `https://wa.me/${cleanWhatsapp}?text=${whatsappText}`
+    : `https://api.whatsapp.com/send?text=${whatsappText}`;
+
+  const handleRequestSlot = async () => {
+    if (!selSlot || !selDateLabel) return;
+    const email = visitorEmail.trim();
+    if (!email || !email.includes("@")) {
+      setStatusMessage("Please enter a valid email so Suvendu can send you the Google Meet link.");
+      emailRef.current?.focus();
+      return;
+    }
+
+    try {
+      sessionStorage.setItem("shuv-visitor-email", email);
+    } catch {}
+
+    setBookingStatus("sending");
+    setStatusMessage("");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: visitorName.trim() || "Portfolio Visitor",
+          email,
+          type: "meeting",
+          message: `Google Meet 30-minute call requested from portfolio scheduler for ${selDateLabel} at ${timeIn(IST_TZ, selSlot, false)} IST.`,
+          meetingDetails: {
+            date: selDateLabel,
+            timeIst: `${timeIn(IST_TZ, selSlot, false)}\u2013${timeIn(IST_TZ, selSlot + 30 * 60 * 1000, false)} IST`,
+            timeLocal: `${selSlotLabel}\u2013${timeIn(visitorTz, selSlot + 30 * 60 * 1000, true)} in visitor time (${visitorTz})`,
+            timezone: visitorTz,
+          },
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (res.ok && json.ok) {
+        setBookingStatus("sent");
+        setStatusMessage("✓ Meeting request sent! Notification delivered to Suvendu's Gmail. You'll receive the Google Meet invite shortly.");
+      } else {
+        setBookingStatus("error");
+        setStatusMessage(json.message || "Failed to deliver request. You can open in mail app below.");
+      }
+    } catch {
+      setBookingStatus("error");
+      setStatusMessage("Network error. You can open in mail app below.");
+    }
+  };
 
   return (
     <>
@@ -537,17 +601,81 @@ export function ConnectWithMe() {
                             )}
                           </div>
 
-                          <div className="mt-4 min-h-[3.25rem]">
-                            {confirm ? (
-                              <a
-                                href={confirm.href}
-                                {...(confirm.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                                onClick={completeAndReset}
-                                className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-bg transition-transform duration-300 hover:-translate-y-0.5"
-                              >
-                                {confirm.label}
-                                <span aria-hidden="true">→</span>
-                              </a>
+                          <div className="mt-4 min-h-[3.25rem] space-y-2.5">
+                            {bookingStatus === "sent" ? (
+                              <div className="rounded-xl border border-accent/40 bg-accent/10 p-3.5 text-center">
+                                <p className="text-xs font-bold text-accent">
+                                  ✓ Meeting request received!
+                                </p>
+                                <p className="mt-1 text-[11.5px] leading-relaxed text-soft">
+                                  Gmail notification delivered to Suvendu. I&rsquo;ll review and email you the Google Meet link!
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={completeAndReset}
+                                  className="mt-2.5 inline-block rounded-md bg-accent px-3.5 py-1 text-xs font-semibold text-bg transition-opacity hover:opacity-90"
+                                >
+                                  Close
+                                </button>
+                              </div>
+                            ) : selSlot ? (
+                              booking.meetLink ? (
+                                <a
+                                  href={booking.meetLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={completeAndReset}
+                                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-bg transition-transform duration-300 hover:-translate-y-0.5"
+                                >
+                                  Continue on Google Calendar
+                                  <span aria-hidden="true">→</span>
+                                </a>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="space-y-1">
+                                    <input
+                                      ref={emailRef}
+                                      type="email"
+                                      value={visitorEmail}
+                                      onChange={(e) => {
+                                        setVisitorEmail(e.target.value);
+                                        if (statusMessage) setStatusMessage("");
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleRequestSlot();
+                                      }}
+                                      placeholder="Your email (to receive Meet invite)"
+                                      className="w-full rounded-lg border border-line bg-panel px-3.5 py-2 text-xs text-ink placeholder:text-muted focus-visible:outline-accent"
+                                    />
+                                    {statusMessage && (
+                                      <p className={`text-[11px] ${bookingStatus === "error" ? "text-red-400" : "text-accent"}`}>
+                                        {statusMessage}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    disabled={bookingStatus === "sending"}
+                                    onClick={handleRequestSlot}
+                                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg transition-transform duration-300 hover:-translate-y-0.5 disabled:opacity-60"
+                                  >
+                                    {bookingStatus === "sending" ? "Sending Request..." : "Request this slot →"}
+                                  </button>
+
+                                  {confirm && (
+                                    <p className="text-center text-[10px] text-muted">
+                                      Prefer email app?{" "}
+                                      <a
+                                        href={confirm.href}
+                                        className="text-soft underline hover:text-ink"
+                                      >
+                                        Open prefilled draft
+                                      </a>
+                                    </p>
+                                  )}
+                                </div>
+                              )
                             ) : (
                               <p aria-live="polite" className="text-center text-[11px] leading-relaxed text-muted">
                                 {slots.length ? "Select a time — I'll confirm with a Meet link." : "\u00A0"}
@@ -562,12 +690,13 @@ export function ConnectWithMe() {
                         Prefer typing?{" "}
                         <a
                           href={whatsappHref}
-                          {...(booking.whatsapp ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="font-semibold text-accent hover:underline"
                         >
                           Message me on WhatsApp
                         </a>{" "}
-                        — {booking.whatsapp ? "opens straight into a chat." : "I'll share my number there."}
+                        — {cleanWhatsapp ? "opens straight into a chat." : "chat with me directly."}
                       </p>
                     </div>
                   </m.div>

@@ -19,6 +19,13 @@ export function Preloader() {
 
   useIsoLayoutEffect(() => {
     const html = document.documentElement;
+    // a refresh always lands at the very top of the home page —
+    // no browser scroll restoration, no hash jump
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    if (window.location.hash) {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    window.scrollTo(0, 0);
     const finish = () => {
       html.dataset.intro = "done";
       setLeaving(true);

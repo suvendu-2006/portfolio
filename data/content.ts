@@ -194,12 +194,9 @@ export const booking = {
   /** TODO: Google Calendar → create an Appointment schedule → paste its link
      here. While null, "Request this slot" sends a prefilled email instead. */
   meetLink: null as string | null,
-  /** TODO: WhatsApp number in international format, digits only (e.g. 919876543210).
-     While null, the WhatsApp row stays hidden — WhatsApp click-to-chat needs a
-     real number to open a chat, there is no fallback. Set it and "Message me on
-     WhatsApp" appears under the booking calendar, opening WhatsApp with a
-     prefilled message. */
-  whatsapp: null as string | null,
+  /** WhatsApp number in international format, digits only (e.g. 919876543210).
+     Reads from NEXT_PUBLIC_WHATSAPP_NUMBER in environment variables, or fallback string here. */
+  whatsapp: (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || null) as string | null,
 };
 
 export const about = {
