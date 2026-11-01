@@ -20,42 +20,62 @@ export function Preloader() {
   useIsoLayoutEffect(() => {
     const html = document.documentElement;
     // a refresh always lands at the very top of the home page —
-    // no browser scroll restoration, no hash jump
+    // no browser scroll restoration, no hash jump, and late anchor
+    // scrolls + layout shifts get pinned back until the page settles
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";
     if (window.location.hash) {
       history.replaceState(null, "", window.location.pathname + window.location.search);
     }
     window.scrollTo(0, 0);
+    const pin = () => {
+      if (html.dataset.intro !== "done") window.scrollTo(0, 0);
+    };
+    const stopPinning = () => window.removeEventListener("scroll", pin);
+    window.addEventListener("scroll", pin, { passive: true });
+
     const finish = () => {
       html.dataset.intro = "done";
       setLeaving(true);
+      // keep forcing the top until the document has fully loaded and
+      // settled (images grow the page, late anchor scrolls still fire)
+      const hold = window.setInterval(() => window.scrollTo(0, 0), 120);
+      const armStop = () =>
+        timers.current.push(
+          window.setTimeout(() => {
+            window.clearInterval(hold);
+            stopPinning();
+          }, 1200)
+        );
+      if (document.readyState === "complete") armStop();
+      else window.addEventListener("load", armStop, { once: true });
       timers.current.push(window.setTimeout(() => setGone(true), 780));
     };
-    try {
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (reduced) {
-        html.dataset.intro = "done";
-        setGone(true);
-        return;
-      }
-      // no session skip — the intro replays on every reload
-      html.dataset.intro = "pending";
-      const dur = 950;
-      const t0 = performance.now();
-      let raf = requestAnimationFrame(function tick(now: number) {
-        const p = Math.min(1, (now - t0) / dur);
-        const eased = 1 - Math.pow(1 - p, 3);
-        setN(Math.round(eased * 100));
-        if (p < 1) {
-          raf = requestAnimationFrame(tick);
-        } else {
-          finish();
-        }
-      });
-      return () => cancelAnimationFrame(raf);
-    } catch {
-      finish();
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      html.dataset.intro = "done";
+      stopPinning();
+      setGone(true);
+      return;
     }
+    // no session skip — the intro replays on every reload
+    html.dataset.intro = "pending";
+    const dur = 950;
+    const t0 = performance.now();
+    let raf = requestAnimationFrame(function tick(now: number) {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setN(Math.round(eased * 100));
+      if (p < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        finish();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      stopPinning();
+    };
   }, []);
 
   useEffect(() => {

@@ -45,7 +45,7 @@ export function Footer() {
 
         <div className="mt-8 flex flex-col items-center gap-4 border-t border-line py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-xs text-muted sm:flex-row sm:justify-between">
           <p>
-            © {new Date().getFullYear()} {site.name}
+            Copyright <span suppressHydrationWarning>{new Date().getFullYear()}</span> {site.name}.
           </p>
           <ul className="flex gap-2">
             {socials.map((s) => (
