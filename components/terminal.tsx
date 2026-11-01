@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { m, AnimatePresence } from "framer-motion";
 import { projects, site, skills, githubUser } from "@/data/content";
 
 type Kind = "cmd" | "out" | "ok" | "err";
@@ -11,19 +10,21 @@ interface Line {
   href?: string;
 }
 
+const PROMPT = "visitor@shuv:~$";
+
 const out = (text: string): Line => ({ kind: "out", text });
 const ok = (text: string, href?: string): Line => ({ kind: "ok", text, href });
 const err = (text: string): Line => ({ kind: "err", text });
-
-const PROMPT = "visitor@shuv:~$";
 
 /**
  * The secret layer — press ` / ~ anywhere (or type "shuv") and a mini
  * terminal drops in. Everything answers from real site data; `book`
  * hands over to the scheduler, `theme` flips the real toggle.
+ * Rendered as plain DOM (no framer) so it can never snag.
  */
 export function Terminal() {
   const [open, setOpen] = useState(false);
+  const [hint, setHint] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
@@ -31,15 +32,22 @@ export function Terminal() {
   const inputRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const buffer = useRef("");
-  const pendingGithub = useRef(false);
 
   const close = () => {
     setOpen(false);
     setValue("");
+    dismissHint();
+  };
+
+  const dismissHint = () => {
+    setHint(false);
+    try {
+      sessionStorage.setItem("shuv-hint", "1");
+    } catch {}
   };
 
   const run = async (raw: string): Promise<Line[]> => {
-    const [cmd, ...args] = raw.trim().toLowerCase().split(/\s+/);
+    const [cmd] = raw.trim().toLowerCase().split(/\s+/);
     switch (cmd) {
       case "help":
         return [
@@ -79,9 +87,7 @@ export function Terminal() {
           const res = await fetch("/api/spotify");
           const d = await res.json();
           if (!d.title) return [out("spotify is quiet right now — try again later.")];
-          return [
-            ok(`${d.playing ? "now playing" : "last played"} — "${d.title}" · ${d.artist}`, d.url),
-          ];
+          return [ok(`${d.playing ? "now playing" : "last played"} — "${d.title}" · ${d.artist}`, d.url)];
         } catch {
           return [err("spotify is quiet right now — try again later.")];
         }
@@ -102,7 +108,7 @@ export function Terminal() {
         window.setTimeout(() => {
           window.dispatchEvent(new CustomEvent("shuv:open-booking"));
           close();
-        }, 450);
+        }, 350);
         return [ok("opening the scheduler…")];
       case "theme": {
         const btn = document.getElementById("themeToggle");
@@ -147,7 +153,7 @@ export function Terminal() {
     setLines((l) => [...l, ...result]);
   };
 
-  // global trigger keys
+  // global trigger keys + one-time whisper hint
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
@@ -160,6 +166,7 @@ export function Terminal() {
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "`" || e.key === "~") {
         e.preventDefault();
+        dismissHint();
         setOpen((o) => !o);
         return;
       }
@@ -167,16 +174,35 @@ export function Terminal() {
         buffer.current = (buffer.current + e.key.toLowerCase()).slice(-4);
         if (buffer.current === "shuv") {
           buffer.current = "";
+          dismissHint();
           setOpen((o) => !o);
         }
       }
     };
-    const onOpen = () => setOpen(true);
+    const onOpen = () => {
+      dismissHint();
+      setOpen(true);
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("shuv:open-terminal", onOpen);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("shuv:open-terminal", onOpen);
+    };
+  }, []);
+
+  // the whisper — once per session, a few seconds in
+  useEffect(() => {
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem("shuv-hint") === "1";
+    } catch {}
+    if (seen) return;
+    const show = window.setTimeout(() => setHint(true), 4500);
+    const hide = window.setTimeout(() => dismissHint(), 11000);
+    return () => {
+      window.clearTimeout(show);
+      window.clearTimeout(hide);
     };
   }, []);
 
@@ -188,7 +214,7 @@ export function Terminal() {
         out("type help to see what i can do."),
         out(""),
       ]);
-      const id = window.setTimeout(() => inputRef.current?.focus(), 120);
+      const id = window.setTimeout(() => inputRef.current?.focus(), 60);
       return () => window.clearTimeout(id);
     }
   }, [open]);
@@ -199,17 +225,26 @@ export function Terminal() {
   }, [lines, open]);
 
   return (
-    <AnimatePresence>
+    <>
+      {/* the whisper — bottom-left, once per session, click to open */}
+      {hint && !open ? (
+        <button
+          type="button"
+          onClick={() => {
+            dismissHint();
+            setOpen(true);
+          }}
+          className="fixed bottom-24 left-5 z-[105] hidden items-center gap-2 rounded-full border border-line bg-panel/90 px-4 py-2 font-mono text-[11px] text-muted shadow-lg backdrop-blur transition-colors hover:border-accent/50 hover:text-accent sm:flex"
+        >
+          <span className="text-accent">~</span> psst — press ~ for secrets
+        </button>
+      ) : null}
+
       {open ? (
-        <m.div
-          key="terminal"
+        <div
           role="dialog"
           aria-label="Terminal"
           className="fixed left-1/2 top-4 z-[110] w-[min(680px,92vw)] -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-[#0b0b0d]/97 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)] backdrop-blur-md"
-          initial={{ opacity: 0, y: -24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -16 }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* title bar */}
           <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
@@ -305,8 +340,8 @@ export function Terminal() {
               />
             </div>
           </div>
-        </m.div>
+        </div>
       ) : null}
-    </AnimatePresence>
+    </>
   );
 }
