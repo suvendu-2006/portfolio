@@ -24,7 +24,6 @@ const err = (text: string): Line => ({ kind: "err", text });
  */
 export function Terminal() {
   const [open, setOpen] = useState(false);
-  const [hint, setHint] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
@@ -36,14 +35,6 @@ export function Terminal() {
   const close = () => {
     setOpen(false);
     setValue("");
-    dismissHint();
-  };
-
-  const dismissHint = () => {
-    setHint(false);
-    try {
-      sessionStorage.setItem("shuv-hint", "1");
-    } catch {}
   };
 
   const run = async (raw: string): Promise<Line[]> => {
@@ -166,7 +157,6 @@ export function Terminal() {
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "`" || e.key === "~") {
         e.preventDefault();
-        dismissHint();
         setOpen((o) => !o);
         return;
       }
@@ -174,15 +164,11 @@ export function Terminal() {
         buffer.current = (buffer.current + e.key.toLowerCase()).slice(-4);
         if (buffer.current === "shuv") {
           buffer.current = "";
-          dismissHint();
           setOpen((o) => !o);
         }
       }
     };
-    const onOpen = () => {
-      dismissHint();
-      setOpen(true);
-    };
+    const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
     window.addEventListener("shuv:open-terminal", onOpen);
     return () => {
@@ -191,20 +177,24 @@ export function Terminal() {
     };
   }, []);
 
-  // the whisper — once per session, a few seconds in
+  // the whisper lives on the homepage: visible while you're at the hero,
+  // fades once you scroll into the site
+  const [heroZone, setHeroZone] = useState(true);
+  const [warmedUp, setWarmedUp] = useState(false);
+
   useEffect(() => {
-    let seen = false;
-    try {
-      seen = sessionStorage.getItem("shuv-hint") === "1";
-    } catch {}
-    if (seen) return;
-    const show = window.setTimeout(() => setHint(true), 4500);
-    const hide = window.setTimeout(() => dismissHint(), 11000);
-    return () => {
-      window.clearTimeout(show);
-      window.clearTimeout(hide);
-    };
+    const onScroll = () => setHeroZone(window.scrollY < 300);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setWarmedUp(true), 2500);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  const hintVisible = warmedUp && heroZone && !open;
 
   // focus + keep the output pinned to the bottom
   useEffect(() => {
@@ -226,19 +216,19 @@ export function Terminal() {
 
   return (
     <>
-      {/* the whisper — bottom-left, once per session, click to open */}
-      {hint && !open ? (
-        <button
-          type="button"
-          onClick={() => {
-            dismissHint();
-            setOpen(true);
-          }}
-          className="fixed bottom-24 left-5 z-[105] hidden items-center gap-2 rounded-full border border-line bg-panel/90 px-4 py-2 font-mono text-[11px] text-muted shadow-lg backdrop-blur transition-colors hover:border-accent/50 hover:text-accent sm:flex"
-        >
-          <span className="text-accent">~</span> psst — press ~ for secrets
-        </button>
-      ) : null}
+      {/* the whisper — homepage only, fades away once you're in the site */}
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+        }}
+        aria-label="Open terminal"
+        className={`fixed bottom-24 left-5 z-[105] hidden items-center gap-2 rounded-full border border-line bg-panel/90 px-4 py-2 font-mono text-[11px] text-muted shadow-lg backdrop-blur transition-all duration-500 hover:border-accent/50 hover:text-accent sm:flex ${
+          hintVisible ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
+        }`}
+      >
+        <span className="text-accent">~</span> psst — press ~ for secrets
+      </button>
 
       {open ? (
         <div
