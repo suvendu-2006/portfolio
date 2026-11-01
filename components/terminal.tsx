@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { projects, site, skills, githubUser } from "@/data/content";
+import { phelpsQuotes, projects, site, skills, githubUser } from "@/data/content";
 
 type Kind = "cmd" | "out" | "ok" | "err";
 interface Line {
@@ -48,6 +48,7 @@ export function Terminal() {
           out("  skills      what i actually use"),
           out("  spotify     what's playing right now"),
           out("  github      contributions this year"),
+          out("  quote       a line worth remembering"),
           out("  book        open the scheduler"),
           out("  theme       flip dark / light"),
           out("  contact     where to reach me"),
@@ -117,6 +118,10 @@ export function Terminal() {
       }
       case "contact":
         return [out("the form at the bottom of the page — or run book.")];
+      case "quote": {
+        const q = phelpsQuotes[Math.floor(Math.random() * phelpsQuotes.length)];
+        return [out(`"${q}"`), ok("— michael phelps")];
+      }
       case "clear":
         return [];
       case "exit":
