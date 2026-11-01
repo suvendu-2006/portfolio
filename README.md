@@ -15,8 +15,8 @@ site/                         ← this folder IS the repo (git init here, deploy
 │  ├─ globals.css             # palette variables (dark + light), .u-line hover animation
 │  ├─ opengraph-image.tsx     # OG image generated at the edge
 │  ├─ sitemap.ts / robots.ts
-│  ├─ api/contact/route.ts    # form backend (TODO: wire Resend)
-│  └─ api/spotify/route.ts    # header now-playing (needs 3 Spotify env vars)
+│  ├─ api/contact/route.ts    # form & meeting scheduler backend (Resend integration)
+│  └─ api/spotify/route.ts    # header now-playing (Spotify Web API real-time sync)
 ├─ components/
 │  ├─ nav.tsx                 # links + theme toggle + Spotify now-playing
 │  ├─ hero.tsx  proof-strip.tsx  projects.tsx (cards + case-study modal)
