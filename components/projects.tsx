@@ -102,7 +102,7 @@ export function Projects() {
                       alt={project.image.alt}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
-                      className="project-media object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+                      className="object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.05]"
                       priority={i === 0}
                     />
                   </span>
