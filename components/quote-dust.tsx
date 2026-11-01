@@ -37,11 +37,21 @@ export function QuoteDust({ author }: { author: string }) {
     if (!ctx) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const rawFamily = getComputedStyle(canvas).getPropertyValue("--font-serif") || "Georgia, serif";
-    const firstFamily = rawFamily.split(",")[0].trim().replace(/^['"]|['"]$/g, "") || "Georgia";
-    const inkRaw =
-      getComputedStyle(document.documentElement).getPropertyValue("--ink") || "244 244 245";
-    const ink = `rgb(${inkRaw.trim().split(/\s+/).join(",")})`;
+    const getInk = () => {
+      const isLight = document.documentElement.dataset.theme === "light";
+      const raw = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+      if (!raw) return isLight ? "rgb(24, 24, 27)" : "rgb(244, 244, 245)";
+      const parts = raw.split(/\s+/).filter(Boolean);
+      if (parts.length >= 3) {
+        return `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
+      }
+      return isLight ? "rgb(24, 24, 27)" : "rgb(244, 244, 245)";
+    };
+
+    const getFontFamily = () => {
+      const rawFamily = getComputedStyle(canvas).getPropertyValue("--font-serif") || "Georgia, serif";
+      return rawFamily.split(",")[0].trim().replace(/^['"]|['"]$/g, "") || "Georgia";
+    };
 
     let width = 320;
     let cssH = 120;
@@ -57,6 +67,7 @@ export function QuoteDust({ author }: { author: string }) {
     let disposed = false;
 
     const setFont = () => {
+      const firstFamily = getFontFamily();
       ctx.font = `500 ${fontSize}px "${firstFamily}"`;
     };
 
@@ -94,7 +105,7 @@ export function QuoteDust({ author }: { author: string }) {
     /** paint the current text and read it back as particle targets */
     const sample = (): Particle[] => {
       ctx.clearRect(0, 0, width, cssH);
-      ctx.fillStyle = ink;
+      ctx.fillStyle = getInk();
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       wraps[idx].forEach((line, i) => {
@@ -139,6 +150,7 @@ export function QuoteDust({ author }: { author: string }) {
     const drawCrisp = (alpha: number) => {
       if (alpha <= 0) return;
       ctx.globalAlpha = alpha;
+      ctx.fillStyle = getInk();
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       wraps[idx].forEach((line, i) => {
@@ -163,6 +175,18 @@ export function QuoteDust({ author }: { author: string }) {
     });
     visibility.observe(canvas);
 
+    // Re-render immediately when the theme switches between light & dark
+    const themeObserver = new MutationObserver(() => {
+      if (phase === "hold") {
+        ctx.clearRect(0, 0, width, cssH);
+        drawCrisp(1);
+      }
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
     const tick = (now: number) => {
       if (disposed) return;
       if (!inView || pausedAt !== null) {
@@ -170,7 +194,7 @@ export function QuoteDust({ author }: { author: string }) {
         return;
       }
       ctx.clearRect(0, 0, width, cssH);
-      ctx.fillStyle = ink;
+      ctx.fillStyle = getInk();
 
       if (phase === "in") {
         let done = true;
@@ -223,6 +247,7 @@ export function QuoteDust({ author }: { author: string }) {
 
     const start = () => {
       cancelAnimationFrame(raf);
+      window.addEventListener("resize", start);
       setup();
       if (reduced) {
         // reduced motion: no moving particles — a static dot-matrix quote
@@ -230,7 +255,7 @@ export function QuoteDust({ author }: { author: string }) {
         particles = sample();
         const staticDraw = () => {
           ctx.clearRect(0, 0, width, cssH);
-          ctx.fillStyle = ink;
+          ctx.fillStyle = getInk();
           drawCrisp(1);
         };
         staticDraw();
@@ -243,9 +268,11 @@ export function QuoteDust({ author }: { author: string }) {
         return () => {
           disposed = true;
           window.clearInterval(cycle);
+          themeObserver.disconnect();
           window.removeEventListener("resize", start);
         };
       }
+      const firstFamily = getFontFamily();
       document.fonts.load(`500 24px "${firstFamily}"`).catch(() => {});
       document.fonts.ready.then(() => {
         if (disposed) return;
@@ -258,6 +285,7 @@ export function QuoteDust({ author }: { author: string }) {
         disposed = true;
         cancelAnimationFrame(raf);
         visibility.disconnect();
+        themeObserver.disconnect();
         window.removeEventListener("resize", start);
       };
     };
