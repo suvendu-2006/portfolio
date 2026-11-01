@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   try {
     const res = await fetch(
       `https://github-contributions-api.jogruber.de/v4/${githubUser}?y=${year}`,
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 600 } }
     );
     if (!res.ok) {
       return Response.json({ error: "github_unavailable" }, { status: 502 });
