@@ -16,8 +16,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const apiKey =
-    process.env.RESEND_API_KEY || "RESEND_API_KEY_REDACTED";
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return Response.json(
+      { ok: false, message: "Email service not configured (missing RESEND_API_KEY)" },
+      { status: 503 }
+    );
+  }
   const toEmail =
     process.env.CONTACT_TO_EMAIL || "sahoosuvendukumar84@gmail.com";
 
