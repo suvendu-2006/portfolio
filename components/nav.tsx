@@ -16,6 +16,26 @@ export function Nav() {
   const { scrollYProgress } = useScroll();
   const [active, setActive] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+
+  // smart nav: hides while scrolling down, returns the moment you scroll up
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (mobileMenuOpen) {
+        setHidden(false);
+      } else if (y > lastY + 6 && y > 140) {
+        setHidden(true);
+      } else if (y < lastY - 6 || y < 140) {
+        setHidden(false);
+      }
+      lastY = y;
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [mobileMenuOpen]);
 
   // highlight the nav link of the section currently on screen
   useEffect(() => {
@@ -68,7 +88,11 @@ export function Nav() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-line bg-bg/90 backdrop-blur-md">
+      <header
+        className={`fixed inset-x-0 top-0 z-50 border-b border-line bg-bg/90 backdrop-blur-md transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          hidden ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
         <m.div
           aria-hidden="true"
           className="fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-accent"

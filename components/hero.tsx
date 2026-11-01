@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import { LetterMatrix } from "@/components/letter-matrix";
 import { site } from "@/data/content";
@@ -7,8 +8,36 @@ import { site } from "@/data/content";
 const at = (d: string) => ({ "--d": d }) as CSSProperties;
 
 export function Hero() {
+  // the whole hero sinks and fades as you scroll away — cinematic exit
+  const heroRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const y = window.scrollY;
+        const vh = window.innerHeight;
+        if (y <= vh && heroRef.current) {
+          const p = y / vh;
+          heroRef.current.style.transform = `translate3d(0, ${y * 0.35}px, 0)`;
+          heroRef.current.style.opacity = String(1 - p * 0.9);
+        }
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
   return (
     <section
+      ref={heroRef}
       className="relative flex min-h-svh flex-col overflow-hidden"
       aria-label="Introduction"
     >

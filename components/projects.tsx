@@ -19,6 +19,7 @@ const statusStyle: Record<Project["status"], string> = {
 export function Projects() {
   const [open, setOpen] = useState<Project | null>(null);
   const figRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const chipRef = useRef<HTMLDivElement>(null);
 
   // scroll parallax: each project image drifts inside its frame as the card
   // crosses the viewport — transform-only, single listener, batched
@@ -68,7 +69,20 @@ export function Projects() {
           Three systems, each solving a problem I personally cared about. Open a case study for the problem, the build, and the result.
         </p>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+          onMouseMove={(e) => {
+            if (window.matchMedia("(pointer: fine)").matches && chipRef.current) {
+              chipRef.current.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -140%)`;
+            }
+          }}
+          onMouseEnter={() => {
+            if (chipRef.current) chipRef.current.style.opacity = "1";
+          }}
+          onMouseLeave={() => {
+            if (chipRef.current) chipRef.current.style.opacity = "0";
+          }}
+        >
           {projects.map((project, i) => (
             <Reveal key={project.id} delay={i * 0.08}>
               <button
@@ -153,6 +167,18 @@ export function Projects() {
       </div>
 
       <ProjectModal project={open} onClose={() => setOpen(null)} />
+
+      {/* the VIEW chip — trails the cursor across the project cards */}
+      <div
+        ref={chipRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed left-0 top-0 z-[95] hidden lg:block"
+        style={{ opacity: 0 }}
+      >
+        <span className="flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-bg shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] transition-[scale] duration-200 lg:scale-100">
+          view ↗
+        </span>
+      </div>
     </section>
   );
 }
