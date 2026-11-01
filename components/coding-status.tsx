@@ -105,58 +105,40 @@ export function CodingStatus() {
   if (!showWaka && !showGithub) return null;
 
   return (
-    <div className="flex flex-wrap items-stretch gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       {showWaka ? (
-        <div className="inline-flex min-w-[210px] flex-col justify-between gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-3.5 sm:px-5 sm:py-4">
-          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
-            <span
-              className={`size-2 shrink-0 rounded-full ${
-                waka.activeNow
-                  ? "animate-pulse bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
-                  : "bg-emerald-500/80"
-              }`}
-              aria-hidden="true"
-            />
-            <span className="font-display text-base font-bold text-ink">
-              {waka.totalText}
-            </span>
-            <span className="text-xs text-muted">coded today</span>
-          </div>
-
-          {waka.topProject ? (
-            <p className="text-[11px] text-muted">
-              mostly on <span className="font-medium text-soft">{waka.topProject}</span>
-            </p>
-          ) : null}
+        <div className="inline-flex items-center gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-2.5 sm:px-5 sm:py-3">
+          <span
+            className={`size-2 shrink-0 rounded-full ${
+              waka.activeNow
+                ? "animate-pulse bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
+                : "bg-emerald-500/80"
+            }`}
+            aria-hidden="true"
+          />
+          <span className="font-display text-base font-bold text-ink">
+            {waka.totalText}
+          </span>
+          <span className="text-xs text-muted">coded today</span>
         </div>
       ) : null}
 
       {showGithub ? (
-        <div className="inline-flex min-w-[210px] flex-col justify-between gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-3.5 sm:px-5 sm:py-4">
-          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
-            <span
-              className={`size-2 shrink-0 rounded-full ${
-                github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 3
-                  ? "animate-pulse bg-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.6)]"
-                  : github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 24
-                    ? "bg-accent/70"
-                    : "bg-muted"
-              }`}
-              aria-hidden="true"
-            />
-            <span className="font-display text-base font-bold text-ink">
-              {github.pushesWeek} {github.pushesWeek === 1 ? "push" : "pushes"}
-            </span>
-            <span className="text-xs text-muted">this week on GitHub</span>
-          </div>
-
-          {github.lastPushRepo ? (
-            <p className="text-[11px] text-muted">
-              last push on <span className="font-medium text-soft">{github.lastPushRepo}</span>
-            </p>
-          ) : (
-            <p className="text-[11px] text-muted">tracked across active repos</p>
-          )}
+        <div className="inline-flex items-center gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-2.5 sm:px-5 sm:py-3">
+          <span
+            className={`size-2 shrink-0 rounded-full ${
+              github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 3
+                ? "animate-pulse bg-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.6)]"
+                : github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 24
+                  ? "bg-accent/70"
+                  : "bg-muted"
+            }`}
+            aria-hidden="true"
+          />
+          <span className="font-display text-base font-bold text-ink">
+            {github.pushesWeek} {github.pushesWeek === 1 ? "push" : "pushes"}
+          </span>
+          <span className="text-xs text-muted">this week on GitHub</span>
         </div>
       ) : null}
     </div>
