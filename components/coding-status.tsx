@@ -20,11 +20,10 @@ interface PushState {
 }
 
 /**
- * Live developer status — displays real editor work time from WakaTime
+ * Live developer status — displays real editor work time
  * alongside shipping activity from GitHub.
  *
- * Polled regularly without any fake states: if an API is unavailable or
- * unconfigured, its card cleanly hides.
+ * Polled regularly without any placeholder or fake states.
  */
 export function CodingStatus() {
   const [waka, setWaka] = useState<WakaState | null>(null);
@@ -100,7 +99,7 @@ export function CodingStatus() {
     };
   }, []);
 
-  const showWaka = !wakaHidden && waka !== null;
+  const showWaka = !wakaHidden && waka !== null && waka.totalSeconds > 0;
   const showGithub = !githubHidden && github !== null;
 
   if (!showWaka && !showGithub) return null;
@@ -114,18 +113,12 @@ export function CodingStatus() {
               className={`size-2 rounded-full ${
                 waka.activeNow
                   ? "animate-pulse bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
-                  : waka.totalSeconds > 0
-                    ? "bg-emerald-500/80"
-                    : "bg-muted"
+                  : "bg-emerald-500/80"
               }`}
               aria-hidden="true"
             />
             <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink">
-              {waka.activeNow
-                ? "Coding now"
-                : waka.totalSeconds > 0
-                  ? "Coded today"
-                  : "Off the keys"}
+              {waka.activeNow ? "Coding now" : "Coded today"}
             </span>
           </div>
 
@@ -153,9 +146,7 @@ export function CodingStatus() {
             <p className="text-[11px] text-muted">
               mostly on <span className="font-medium text-soft">{waka.topProject}</span>
             </p>
-          ) : (
-            <p className="text-[11px] text-muted">via WakaTime</p>
-          )}
+          ) : null}
         </div>
       ) : null}
 
