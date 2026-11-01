@@ -196,7 +196,7 @@ export const booking = {
   meetLink: null as string | null,
   /** WhatsApp number in international format, digits only (e.g. 919876543210).
      Reads from NEXT_PUBLIC_WHATSAPP_NUMBER in environment variables, or fallback string here. */
-  whatsapp: (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || null) as string | null,
+  whatsapp: (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "919937061405") as string | null,
 };
 
 export const about = {
