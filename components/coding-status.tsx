@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+interface WakaState {
+  totalText: string;
+  hours: number;
+  minutes: number;
+  totalSeconds: number;
+  activeNow: boolean;
+  topProject: string | null;
+  languages: string[];
+}
+
 interface PushState {
   pushesWeek: number;
   commitsWeek: number;
@@ -10,85 +20,196 @@ interface PushState {
 }
 
 /**
- * Live shipping status — real push activity from GitHub's public
- * events, polled every five minutes. States derive from the data:
- * shipping now (recent push) / pushed today / quiet day.
+ * Live developer status — displays real editor work time from WakaTime
+ * alongside shipping activity from GitHub.
+ *
+ * Polled regularly without any fake states: if an API is unavailable or
+ * unconfigured, its card cleanly hides.
  */
 export function CodingStatus() {
-  const [state, setState] = useState<PushState | null>(null);
-  const [hidden, setHidden] = useState(false);
+  const [waka, setWaka] = useState<WakaState | null>(null);
+  const [wakaHidden, setWakaHidden] = useState(false);
+
+  const [github, setGithub] = useState<PushState | null>(null);
+  const [githubHidden, setGithubHidden] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    const load = async () => {
+    const loadWaka = async () => {
       try {
-        const res = await fetch("/api/github-events");
-        if (!res.ok) {
-          if (alive) setHidden(true);
+        const res = await fetch("/api/wakatime");
+        if (res.status === 501 || !res.ok) {
+          if (alive) setWakaHidden(true);
           return;
         }
         const d = await res.json();
         if (!alive) return;
-        setState({
-          pushesWeek: d.pushesWeek ?? 0,
-          commitsWeek: d.commitsWeek ?? 0,
-          lastPushHoursAgo: d.lastPushHoursAgo ?? null,
-          lastPushRepo: d.lastPushRepo ?? null,
-        });
-        setHidden(false);
+        if (d.totalText !== undefined) {
+          setWaka({
+            totalText: d.totalText,
+            hours: d.hours ?? 0,
+            minutes: d.minutes ?? 0,
+            totalSeconds: d.totalSeconds ?? 0,
+            activeNow: !!d.activeNow,
+            topProject: d.topProject ?? null,
+            languages: Array.isArray(d.languages) ? d.languages : [],
+          });
+          setWakaHidden(false);
+        }
       } catch {
-        /* keep last state on transient blips */
+        /* keep last state on transient network issues */
       }
     };
-    load();
-    const id = window.setInterval(load, 300000);
+
+    loadWaka();
+    const id = window.setInterval(loadWaka, 60000);
     return () => {
       alive = false;
       window.clearInterval(id);
     };
   }, []);
 
-  if (hidden || !state) return null;
+  useEffect(() => {
+    let alive = true;
+    const loadGithub = async () => {
+      try {
+        const res = await fetch("/api/github-events");
+        if (!res.ok) {
+          if (alive) setGithubHidden(true);
+          return;
+        }
+        const d = await res.json();
+        if (!alive) return;
+        setGithub({
+          pushesWeek: d.pushesWeek ?? 0,
+          commitsWeek: d.commitsWeek ?? 0,
+          lastPushHoursAgo: d.lastPushHoursAgo ?? null,
+          lastPushRepo: d.lastPushRepo ?? null,
+        });
+        setGithubHidden(false);
+      } catch {
+        /* keep last state */
+      }
+    };
 
-  const { pushesWeek, commitsWeek, lastPushHoursAgo, lastPushRepo } = state;
-  const shippingNow = lastPushHoursAgo !== null && lastPushHoursAgo < 3;
-  const shippedToday = lastPushHoursAgo !== null && lastPushHoursAgo < 24;
+    loadGithub();
+    const id = window.setInterval(loadGithub, 300000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, []);
 
-  const label = shippingNow
-    ? "Shipping now"
-    : shippedToday
-      ? "Shipped today"
-      : lastPushHoursAgo !== null
-        ? `Last push ${Math.round(lastPushHoursAgo)}h ago`
-        : "On GitHub";
+  const showWaka = !wakaHidden && waka !== null;
+  const showGithub = !githubHidden && github !== null;
+
+  if (!showWaka && !showGithub) return null;
 
   return (
-    <div className="inline-flex flex-col gap-2.5 rounded-xl border border-line bg-panel/90 px-5 py-4">
-      <div className="flex items-center gap-2.5">
-        <span
-          className={`size-2 rounded-full ${
-            shippingNow ? "animate-pulse bg-accent" : shippedToday ? "bg-accent/60" : "bg-muted"
-          }`}
-          aria-hidden="true"
-        />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink">
-          {label}
-        </span>
-      </div>
-      <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
-        <svg viewBox="0 0 24 24" className="size-4 shrink-0 text-accent" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="8.5" />
-          <path d="M12 7.5V12l3 2" />
-        </svg>
-        <span className="font-display text-base font-bold text-ink">
-          {pushesWeek} {pushesWeek === 1 ? "push" : "pushes"}
-        </span>
-        <span className="text-xs text-muted">this week on GitHub</span>
-      </div>
-      {lastPushRepo ? (
-        <p className="text-[11px] text-muted">
-          last push on <span className="font-medium text-soft">{lastPushRepo}</span>
-        </p>
+    <div className="flex flex-wrap items-stretch gap-3">
+      {showWaka ? (
+        <div className="inline-flex min-w-[210px] flex-col justify-between gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-3.5 sm:px-5 sm:py-4">
+          <div className="flex items-center gap-2">
+            <span
+              className={`size-2 rounded-full ${
+                waka.activeNow
+                  ? "animate-pulse bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
+                  : waka.totalSeconds > 0
+                    ? "bg-emerald-500/80"
+                    : "bg-muted"
+              }`}
+              aria-hidden="true"
+            />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink">
+              {waka.activeNow
+                ? "Coding now"
+                : waka.totalSeconds > 0
+                  ? "Coded today"
+                  : "Off the keys"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
+            <svg
+              viewBox="0 0 24 24"
+              className="size-4 shrink-0 text-accent"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            <span className="font-display text-base font-bold text-ink">
+              {waka.totalText}
+            </span>
+            <span className="text-xs text-muted">coded today</span>
+          </div>
+
+          {waka.topProject ? (
+            <p className="text-[11px] text-muted">
+              mostly on <span className="font-medium text-soft">{waka.topProject}</span>
+            </p>
+          ) : (
+            <p className="text-[11px] text-muted">via WakaTime</p>
+          )}
+        </div>
+      ) : null}
+
+      {showGithub ? (
+        <div className="inline-flex min-w-[210px] flex-col justify-between gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-3.5 sm:px-5 sm:py-4">
+          <div className="flex items-center gap-2">
+            <span
+              className={`size-2 rounded-full ${
+                github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 3
+                  ? "animate-pulse bg-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.6)]"
+                  : github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 24
+                    ? "bg-accent/70"
+                    : "bg-muted"
+              }`}
+              aria-hidden="true"
+            />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink">
+              {github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 3
+                ? "Shipping now"
+                : github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 24
+                  ? "Shipped today"
+                  : github.lastPushHoursAgo !== null
+                    ? `Last push ${Math.round(github.lastPushHoursAgo)}h ago`
+                    : "On GitHub"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-bg px-3.5 py-2">
+            <svg
+              viewBox="0 0 24 24"
+              className="size-4 shrink-0 text-accent"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5V12l3 2" />
+            </svg>
+            <span className="font-display text-base font-bold text-ink">
+              {github.pushesWeek} {github.pushesWeek === 1 ? "push" : "pushes"}
+            </span>
+            <span className="text-xs text-muted">this week on GitHub</span>
+          </div>
+
+          {github.lastPushRepo ? (
+            <p className="text-[11px] text-muted">
+              last push on <span className="font-medium text-soft">{github.lastPushRepo}</span>
+            </p>
+          ) : (
+            <p className="text-[11px] text-muted">tracked across active repos</p>
+          )}
+        </div>
       ) : null}
     </div>
   );
