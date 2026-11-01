@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Caveat, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { Preloader } from "@/components/preloader";
 import { Nav } from "@/components/nav";
 import { site, socials } from "@/data/content";
 
@@ -22,6 +23,7 @@ const body = Inter({
 const serif = Playfair_Display({
   subsets: ["latin"],
   weight: ["500"],
+  style: ["normal", "italic"],
   variable: "--font-serif",
   display: "swap",
 });
@@ -100,9 +102,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-bg font-body text-ink antialiased">
+        <Preloader />
         <Providers>
           <Nav />
           {children}
+          <div aria-hidden="true" className="grain" />
         </Providers>
       </body>
     </html>

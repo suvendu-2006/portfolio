@@ -4,6 +4,10 @@ import { useState } from "react";
 import { email as publicEmail } from "@/data/content";
 import { MaskReveal } from "@/components/mask-reveal";
 import { Reveal } from "@/components/reveal";
+import { Scramble } from "@/components/scramble";
+import { DrawLine } from "@/components/draw-line";
+import { HairLine } from "@/components/hairline";
+import { ConnectWithMe } from "@/components/connect-modal";
 
 type FormState = "idle" | "sending" | "sent" | "error";
 
@@ -70,19 +74,28 @@ export function Contact() {
   }
 
   return (
-    <section id="contact" aria-label="Contact" className="scroll-mt-20 border-t border-line py-20 sm:py-28">
+    <section id="contact" aria-label="Contact" className="scroll-mt-20 py-20 sm:py-28">
+      <HairLine />
       <div className="mx-auto max-w-content px-5 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
           <Reveal>
             <p className="mb-3 text-xs font-medium uppercase tracking-[0.22em] text-accent">
-              04 · Contact
+              <Scramble text="04 · Contact" />
             </p>
-            <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-              <MaskReveal delay={0.08}>Let&rsquo;s build something</MaskReveal>
+            <h2 className="text-balance font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl lg:text-6xl">
+              <MaskReveal delay={0.08}>
+                Let&rsquo;s build{" "}
+                <span className="relative inline-block font-serif font-medium text-accent">
+                  something
+                  <DrawLine className="bottom-[-6px] h-[2px] bg-accent/70" delay={0.55} />
+                </span>
+              </MaskReveal>
             </h2>
             <p className="mt-3 text-base leading-relaxed text-soft">
               Internships, collaborations, or just a question about one of the projects — all of it lands in the same place.
             </p>
+
+            <ConnectWithMe />
 
             {publicEmail ? (
               <a
@@ -140,7 +153,7 @@ export function Contact() {
               <button
                 type="submit"
                 disabled={state === "sending"}
-                className="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-bg transition-transform hover:-translate-y-0.5 disabled:opacity-60"
+                className="btn-sheen rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-bg transition-transform hover:-translate-y-0.5 disabled:opacity-60"
               >
                 {state === "sending" ? "Sending…" : "Send message"}
               </button>

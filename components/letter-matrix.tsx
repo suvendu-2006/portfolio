@@ -25,6 +25,11 @@ export function LetterMatrix({
     if (!container) return;
     const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // sync the scramble-in with the intro preloader: while the curtain is up
+    // the word waits, on repeat visits it settles almost immediately
+    let introDelay = 250;
+    if (document.documentElement.dataset.intro === "pending") introDelay = 1250;
+    else if (document.documentElement.dataset.intro === "done") introDelay = 120;
 
     const randomLetter = (exclude = "") => {
       let ch;
@@ -87,7 +92,7 @@ export function LetterMatrix({
         const timer = setTimeout(() => {
           const stop = flicker(span, span.dataset.target || "", 4);
           cleanupTimers.push(stop);
-        }, 250 + i * 110);
+        }, introDelay + i * 110);
         cleanupTimers.push(timer as unknown as ReturnType<typeof setInterval>);
       });
       // ambient reshuffle
@@ -103,11 +108,40 @@ export function LetterMatrix({
       cleanupTimers.push(ambient);
     }
 
+    // mouse parallax — rows drift at opposite depths, lerped
+    let removeParallax: (() => void) | null = null;
+    if (!reduced && window.matchMedia("(pointer: fine)").matches) {
+      const rowEls = Array.from(container.children) as HTMLElement[];
+      const depthFor = (i: number) =>
+        (i - (rows - 1) / 2) / ((rows - 1) / 2 || 1); // -1 … 1 by row
+      let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
+      const loop = () => {
+        cx += (tx - cx) * 0.06;
+        cy += (ty - cy) * 0.06;
+        rowEls.forEach((row, i) => {
+          const d = depthFor(i);
+          row.style.transform = `translate3d(${(cx * 14 * d).toFixed(2)}px, ${(cy * 8 * Math.abs(d)).toFixed(2)}px, 0)`;
+        });
+        raf = requestAnimationFrame(loop);
+      };
+      const onMove = (e: PointerEvent) => {
+        tx = (e.clientX / window.innerWidth - 0.5) * 2;
+        ty = (e.clientY / window.innerHeight - 0.5) * 2;
+        if (!raf) loop();
+      };
+      window.addEventListener("pointermove", onMove, { passive: true });
+      removeParallax = () => {
+        window.removeEventListener("pointermove", onMove);
+        cancelAnimationFrame(raf);
+      };
+    }
+
     return () => {
       cleanupTimers.forEach((t) => {
         clearInterval(t);
         clearTimeout(t);
       });
+      removeParallax?.();
       container.innerHTML = "";
     };
   }, [rows, cols, words]);

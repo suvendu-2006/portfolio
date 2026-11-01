@@ -45,6 +45,21 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* mobile hardening: no 300ms tap delay / double-tap zoom on controls;
+   modals keep their scroll contained instead of rubber-banding the page */
+a,
+button,
+input,
+textarea,
+select,
+[role="button"] {
+  touch-action: manipulation;
+}
+.scroll-contain {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* the header link strip scrolls on small screens; hide its scrollbar */
 .nav-strip {
   scrollbar-width: none;
@@ -99,8 +114,68 @@ body {
 .lm-word {
   font-family: var(--font-serif);
   font-weight: 500;
-  font-size: clamp(34px, 6.4vmin, 62px);
+  font-size: clamp(36px, 7vmin, 74px);
   color: rgb(var(--ink));
+}
+
+/* film-grain texture over the whole page (static, pointer-transparent) */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0.055;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* cursor spotlight on project cards — a soft accent glow follows the mouse */
+.spotlight {
+  position: relative;
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    rgb(var(--accent) / 0.08),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+
+/* ghost numerals on project cards — outlined, fill mint on hover */
+.ghost-index {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(var(--soft) / 0.55);
+  transition: color 0.4s ease, -webkit-text-stroke-color 0.4s ease;
+}
+.group:hover .ghost-index {
+  color: rgb(var(--accent));
+  -webkit-text-stroke-color: transparent;
+}
+
+/* giant outlined footer wordmark */
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 0.82;
+  letter-spacing: -0.02em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(var(--soft) / 0.4);
+  user-select: none;
 }
 
 @media (max-width: 640px) {
@@ -234,4 +309,137 @@ html {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(var(--muted));
+}
+
+/* ============================================================
+   Intro gate + hero entrance choreography.
+   data-intro="pending" → preloader is up: hero pieces hidden, page locked.
+   data-intro="done"    → curtain lifts: pieces animate in, each with its
+                          own --d delay. No JS → no attribute → fully
+                          visible page (graceful fallback).
+   ============================================================ */
+html[data-intro="pending"] {
+  overflow: hidden;
+}
+html[data-intro="pending"] :is(.hero-in, .hero-slide, .hero-track, .hero-frame) {
+  opacity: 0;
+}
+html[data-intro="done"] .hero-in {
+  animation: hero-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0s);
+}
+html[data-intro="done"] .hero-slide {
+  animation: hero-slide 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0s);
+}
+html[data-intro="done"] .hero-track {
+  animation: hero-track 1.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0s);
+}
+html[data-intro="done"] .hero-frame {
+  animation: hero-frame 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes hero-slide {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes hero-track {
+  from {
+    opacity: 0;
+    letter-spacing: 0.42em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0em;
+  }
+}
+@keyframes hero-frame {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ------------------------------------------------------------
+   "Connect with me" CTA — a quiet card: his "S" circle, a plus,
+   and the visitor's circle. On connect the plus rotates away and
+   the two circles slide together until they touch.
+   ------------------------------------------------------------ */
+.c-plus {
+  width: 25px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgb(var(--muted));
+  transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.35s ease;
+}
+.pair .c-s,
+.pair .c-v {
+  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1), background-color 0.3s ease,
+    color 0.3s ease, border-color 0.3s ease;
+}
+.pair.connected {
+  filter: drop-shadow(0 0 10px rgb(var(--accent) / 0.4));
+  transition: filter 0.5s ease;
+}
+.pair.connected .c-plus {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.6);
+}
+.pair.connected .c-s {
+  transform: translateX(12.5px);
+}
+.pair.connected .c-v {
+  transform: translateX(-12.5px);
+}
+
+/* light sweep for accent buttons on hover (Send message, etc.) */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 32%,
+    rgb(255 255 255 / 0.18) 46%,
+    rgb(255 255 255 / 0.32) 50%,
+    rgb(255 255 255 / 0.18) 54%,
+    transparent 68%
+  );
+  transform: translateX(-130%) skewX(-12deg);
+}
+.btn-sheen:hover::after {
+  animation: btn-sheen 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes btn-sheen {
+  to {
+    transform: translateX(130%) skewX(-12deg);
+  }
 }

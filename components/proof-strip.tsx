@@ -47,12 +47,13 @@ export function ProofStrip() {
     <section aria-label="Key numbers" className="border-y border-line bg-panel/50">
       <div className="mx-auto grid max-w-content grid-cols-1 divide-y divide-line px-5 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-8">
         {proofStrip.map((stat, i) => (
-          <Reveal key={stat.label} delay={i * 0.08} className="py-8 sm:py-10">
+          <Reveal key={stat.label} delay={i * 0.08} className="py-10 sm:py-14">
             <div className="text-center">
-              <p className="font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
+              <p className="font-display text-5xl font-extrabold tracking-tight text-ink sm:text-6xl">
                 <CountUp value={stat.value} delay={i * 150} />
               </p>
-              <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                <span className="mr-2 text-accent">{String(i + 1).padStart(2, "0")}</span>
                 {stat.label}
               </p>
             </div>

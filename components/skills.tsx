@@ -1,18 +1,28 @@
 import { skills } from "@/data/content";
 import { MaskReveal } from "@/components/mask-reveal";
 import { Reveal } from "@/components/reveal";
+import { Scramble } from "@/components/scramble";
+import { DrawLine } from "@/components/draw-line";
+import { HairLine } from "@/components/hairline";
 
 export function Skills() {
   return (
-    <section id="skills" aria-label="Skills" className="scroll-mt-20 border-t border-line py-20 sm:py-28">
+    <section id="skills" aria-label="Skills" className="scroll-mt-20 py-20 sm:py-28">
+      <HairLine />
       <div className="mx-auto max-w-content px-5 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
           <Reveal>
             <p className="mb-3 text-xs font-medium uppercase tracking-[0.22em] text-accent">
-              02 · Skills
+              <Scramble text="02 · Skills" />
             </p>
-            <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-              <MaskReveal delay={0.08}>What I actually use</MaskReveal>
+            <h2 className="text-balance font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+              <MaskReveal delay={0.08}>
+                What I actually{" "}
+                <span className="relative inline-block font-serif font-medium text-accent">
+                  use
+                  <DrawLine className="bottom-[-6px] h-[2px] bg-accent/70" delay={0.5} />
+                </span>
+              </MaskReveal>
             </h2>
           </Reveal>
 

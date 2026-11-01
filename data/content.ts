@@ -149,6 +149,17 @@ export const projects: Project[] = [
 ];
 
 /**
+ * Rotating quotes above the footer wordmark — each one assembles,
+ * holds for 5 seconds, then dissolves into dust (canvas particles).
+ */
+export const phelpsQuotes = [
+  "You can’t put a limit on anything. The more you dream, the farther you get.",
+  "If you want to be the best, you have to do things that other people aren’t willing to do.",
+  "Goals should never be easy, they should force you to work, even if they are uncomfortable at the time.",
+  "I think anything is possible if you have the mindset, the will, and the desire to do it.",
+] as const;
+
+/**
  * "What I actually use" — kept deliberately short and honest.
  */
 export const skills = [
@@ -157,7 +168,39 @@ export const skills = [
   { name: "Git & GitHub", level: null },
   { name: "Machine Learning", level: "Intermediate" },
   { name: "RAG", level: "Intermediate" },
+  { name: "Harness", level: "Intermediate" },
+  { name: "MCP", level: "Intermediate" },
 ] as const;
+
+/* ------------------------------------------------------------
+   CONNECT WITH ME — powers the booking modal in the contact
+   section. Time slots render in IST + the visitor's local time
+   automatically (DST-safe), so only the IST windows below ever
+   need editing.
+   ------------------------------------------------------------ */
+export const booking = {
+  /** EDIT: your real weekly availability in IST (your own clock).
+     Each window becomes its own block of slots — morning and
+     evening both show in the picker. */
+  hours: {
+    days: "Mon–Sat",
+    windows: [
+      { start: "10:00", end: "12:30" },
+      { start: "19:00", end: "23:00" },
+    ],
+  },
+  /** Email that meeting requests land in */
+  email: "sahoosuvendukumar84@gmail.com",
+  /** TODO: Google Calendar → create an Appointment schedule → paste its link
+     here. While null, "Request this slot" sends a prefilled email instead. */
+  meetLink: null as string | null,
+  /** TODO: WhatsApp number in international format, digits only (e.g. 919876543210).
+     While null, the WhatsApp row stays hidden — WhatsApp click-to-chat needs a
+     real number to open a chat, there is no fallback. Set it and "Message me on
+     WhatsApp" appears under the booking calendar, opening WhatsApp with a
+     prefilled message. */
+  whatsapp: null as string | null,
+};
 
 export const about = {
   /** First person, under 120 words */
@@ -165,4 +208,11 @@ export const about = {
     "I'm Suvendu — a B.Tech CSE (AI/ML) student at Trident Academy of Technology in Odisha, India.",
     "I started in first year with C, and somewhere between printf and Python I got hooked on building systems that reason over real data. Since then I've shipped SATARK-MPLADS, a fraud-analytics portal tested on 53,197 real public works; Allcited, document Q&A with receipts; and ORBIT AI, a multi-agent research platform.",
   ],
+  /** Quick facts table — verified facts only */
+  facts: [
+    ["Education", "B.Tech CSE (AI/ML) — Trident Academy of Technology"],
+    ["Focus", "AI & ML — systems that reason over real data"],
+    ["Based in", "Odisha, India"],
+    ["Status", "Open to work"],
+  ] as const,
 } as const;

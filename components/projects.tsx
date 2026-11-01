@@ -4,8 +4,11 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { projects, type Project } from "@/data/content";
-import { SectionHeading } from "@/components/section-heading";
+import { MaskReveal } from "@/components/mask-reveal";
 import { Reveal } from "@/components/reveal";
+import { Scramble } from "@/components/scramble";
+import { DrawLine } from "@/components/draw-line";
+import { FadeImage } from "@/components/fade-image";
 
 const statusStyle: Record<Project["status"], string> = {
   live: "border-accent/40 text-accent",
@@ -15,15 +18,55 @@ const statusStyle: Record<Project["status"], string> = {
 
 export function Projects() {
   const [open, setOpen] = useState<Project | null>(null);
+  const figRefs = useRef<Array<HTMLSpanElement | null>>([]);
+
+  // scroll parallax: each project image drifts inside its frame as the card
+  // crosses the viewport — transform-only, single listener, batched
+  // read-then-write so there's no layout thrashing
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const update = () => {
+      const vh = window.innerHeight;
+      const rects = figRefs.current.map((el) => el && el.getBoundingClientRect());
+      figRefs.current.forEach((el, i) => {
+        const r = rects[i];
+        if (!el || !r || r.bottom < 0 || r.top > vh) return;
+        const p = Math.max(-1, Math.min(1, (r.top + r.height / 2 - vh / 2) / vh));
+        el.style.transform = `translate3d(0, ${(p * -5).toFixed(2)}%, 0) scale(1.12)`;
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   return (
     <section id="projects" aria-label="Projects" className="scroll-mt-20 py-20 sm:py-28">
       <div className="mx-auto max-w-content px-5 sm:px-8">
-        <SectionHeading
-          index="01 · Projects"
-          title="Things I've shipped"
-          description="Three systems, each solving a problem I personally cared about. Open a case study for the problem, the build, and the result."
-        />
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+          <p className="text-xs font-medium uppercase tracking-[0.22em] text-accent">
+            <Scramble text="01 · Projects" />
+          </p>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+            ({String(projects.length).padStart(2, "0")} works)
+          </p>
+        </div>
+        <h2 className="mb-3 text-balance font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl lg:text-5xl">
+          <MaskReveal delay={0.08}>
+            Things I&rsquo;ve{" "}
+            <span className="relative inline-block font-serif font-medium text-accent">
+              shipped
+              <DrawLine className="bottom-[-6px] h-[2px] bg-accent/70" delay={0.5} />
+            </span>
+          </MaskReveal>
+        </h2>
+        <p className="mb-10 max-w-xl text-base leading-relaxed text-soft sm:mb-14">
+          Three systems, each solving a problem I personally cared about. Open a case study for the problem, the build, and the result.
+        </p>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project, i) => (
@@ -31,19 +74,38 @@ export function Projects() {
               <button
                 type="button"
                 onClick={() => setOpen(project)}
+                onMouseMove={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+                  e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
+                }}
                 aria-haspopup="dialog"
                 aria-label={`Open the ${project.name} case study`}
-                className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-line bg-panel text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)]"
+                className="spotlight group flex h-full w-full flex-col overflow-hidden rounded-xl border border-line bg-panel text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)]"
               >
                 <figure className="card-shine relative aspect-[4/3] overflow-hidden border-b border-line">
-                  <Image
-                    src={project.image.src}
-                    alt={project.image.alt}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
-                    className="object-cover object-top"
-                    priority={i === 0}
-                  />
+                  <span
+                    aria-hidden="true"
+                    className="ghost-index absolute left-4 top-3 z-[2] text-5xl sm:text-6xl"
+                  >
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span
+                    ref={(el) => {
+                      figRefs.current[i] = el;
+                    }}
+                    className="absolute inset-0 will-change-transform"
+                    style={{ transform: "scale(1.12)" }}
+                  >
+                    <FadeImage
+                      src={project.image.src}
+                      alt={project.image.alt}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
+                      className="object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+                      priority={i === 0}
+                    />
+                  </span>
                 </figure>
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-center justify-between gap-3">
@@ -106,20 +168,27 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
             aria-modal="true"
             aria-label={`${project.name} case study`}
             className="mx-auto my-6 max-w-3xl overflow-hidden rounded-2xl border border-line bg-bg"
-            initial={reduced ? false : { opacity: 0, y: 28, scale: 0.98 }}
+            initial={reduced ? false : { opacity: 0, y: 32, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduced ? undefined : { opacity: 0, y: 20, scale: 0.98 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            exit={reduced ? undefined : { opacity: 0, y: 24, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 280, damping: 28, mass: 0.9 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative aspect-[16/9] w-full border-b border-line sm:aspect-[21/9]">
-              <Image
-                src={project.image.src}
-                alt={project.image.alt}
-                fill
-                sizes="(max-width: 768px) 100vw, 768px"
-                className="object-cover"
-              />
+            <div className="relative aspect-[16/9] w-full overflow-hidden border-b border-line sm:aspect-[21/9]">
+              <m.div
+                className="absolute inset-0"
+                initial={reduced ? false : { scale: 1.08 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Image
+                  src={project.image.src}
+                  alt={project.image.alt}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="object-cover"
+                />
+              </m.div>
               <button
                 ref={closeRef}
                 type="button"
@@ -143,16 +212,21 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
                 </span>
               </div>
 
-              <dl className="mt-6 space-y-5 text-sm leading-relaxed">
+                <dl className="mt-6 space-y-5 text-sm leading-relaxed">
                 {[
                   ["Problem", project.problem],
                   ["What I built", project.built],
                   ["Result", project.result],
-                ].map(([term, def]) => (
-                  <div key={term}>
+                ].map(([term, def], i) => (
+                  <m.div
+                    key={term}
+                    initial={reduced ? false : { opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, delay: 0.15 + i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  >
                     <dt className="text-xs font-medium uppercase tracking-[0.18em] text-accent">{term}</dt>
                     <dd className="mt-1.5 text-soft">{def}</dd>
-                  </div>
+                  </m.div>
                 ))}
                 <div>
                   <dt className="text-xs font-medium uppercase tracking-[0.18em] text-accent">Tech used</dt>
