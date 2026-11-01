@@ -33,15 +33,12 @@ export function Preloader() {
     };
     try {
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      let seen = false;
-      try {
-        seen = sessionStorage.getItem("shuv-intro") === "1";
-      } catch {}
-      if (seen || reduced) {
+      if (reduced) {
         html.dataset.intro = "done";
         setGone(true);
         return;
       }
+      // no session skip — the intro replays on every reload
       html.dataset.intro = "pending";
       const dur = 950;
       const t0 = performance.now();
@@ -52,9 +49,6 @@ export function Preloader() {
         if (p < 1) {
           raf = requestAnimationFrame(tick);
         } else {
-          try {
-            sessionStorage.setItem("shuv-intro", "1");
-          } catch {}
           finish();
         }
       });

@@ -174,18 +174,9 @@ export function ConnectWithMe() {
   const emailRef = useRef<HTMLInputElement>(null);
   const connectTimer = useRef<number | null>(null);
 
+  // no session persistence — the connect ritual replays from scratch
+  // on every visit, exactly as designed
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem("shuv-visitor");
-      if (saved) {
-        setVisitorName(saved);
-        setConnected(true);
-      }
-      const savedEmail = sessionStorage.getItem("shuv-visitor-email");
-      if (savedEmail) {
-        setVisitorEmail(savedEmail);
-      }
-    } catch {}
     return () => {
       if (connectTimer.current) window.clearTimeout(connectTimer.current);
     };
@@ -232,9 +223,6 @@ export function ConnectWithMe() {
     setAsking(false);
     setBookingStatus("idle");
     setStatusMessage("");
-    try {
-      sessionStorage.removeItem("shuv-visitor");
-    } catch {}
   };
 
   const finishConnect = () => {
@@ -243,9 +231,6 @@ export function ConnectWithMe() {
       nameRef.current?.focus();
       return;
     }
-    try {
-      sessionStorage.setItem("shuv-visitor", name);
-    } catch {}
     setAsking(false);
     setConnected(true);
     connectTimer.current = window.setTimeout(openModal, 650); // let the circles meet
@@ -314,10 +299,6 @@ export function ConnectWithMe() {
       emailRef.current?.focus();
       return;
     }
-
-    try {
-      sessionStorage.setItem("shuv-visitor-email", email);
-    } catch {}
 
     setBookingStatus("sending");
     setStatusMessage("");
