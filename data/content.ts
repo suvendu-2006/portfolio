@@ -27,6 +27,7 @@ export interface Project {
   stack?: ProjectStack;
   result: string;
   repo?: string;
+  live?: string;
 }
 
 export interface Social {
@@ -105,6 +106,7 @@ export const projects: Project[] = [
     result:
       "Tested on 53,197 real public works covering 788 MPs, with live MoSPL/e-SAKSHI-verified data displayed state by state.",
     repo: "https://github.com/suvendu-2006/mplads-intelligence-portal",
+    live: "https://mplads-intelligence-portal.vercel.app",
   },
   {
     id: "orbit-ai",
@@ -122,9 +124,7 @@ export const projects: Project[] = [
     built:
       "A platform where specialized agents collaborate on research and productivity workflows, coordinated around a shared context core.",
     tech: ["Python", "LLM agents"],
-    // TODO: fill in the one-line status and links when ORBIT AI ships
-    result: "TODO: one-line status — currently in beta.",
-    // TODO: add live link when available
+    result: "Multi-agent research workflows coordinated around a shared context core — private beta.",
     repo: "https://github.com/suvendu-2006",
   },
   {
@@ -146,8 +146,8 @@ export const projects: Project[] = [
     tech: ["Python", "LLMs", "Citations"],
     result:
       "Live and open for testing — guest mode, nothing saved unless you keep it, published test scores.",
-    // TODO: add the GitHub repo link for Allcited
-    repo: "https://github.com/suvendu-2006",
+    repo: "https://github.com/suvendu-2006/allcited",
+    live: "https://allcited.vercel.app",
   },
 ];
 

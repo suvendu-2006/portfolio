@@ -117,12 +117,34 @@ export function Projects() {
                   <p className="mt-2 line-clamp-2 flex-1 text-sm leading-relaxed text-soft">
                     {project.tagline}
                   </p>
-                  <p className="mt-4 flex items-center gap-1 text-sm font-semibold text-accent">
-                    Case study
-                    <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1.5">
-                      →
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1 text-sm font-semibold text-accent">
+                      Case study
+                      <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1.5">
+                        →
+                      </span>
                     </span>
-                  </p>
+                    {project.live ? (
+                      <span
+                        role="link"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(project.live, "_blank", "noopener,noreferrer");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            window.open(project.live, "_blank", "noopener,noreferrer");
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[11px] font-semibold text-accent transition-colors hover:bg-accent hover:text-bg"
+                        title={`Open ${project.name} prototype`}
+                      >
+                        Live prototype ↗
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </button>
             </Reveal>
@@ -174,27 +196,56 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
             transition={{ type: "spring", stiffness: 280, damping: 28, mass: 0.9 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative aspect-[16/9] w-full overflow-hidden border-b border-line sm:aspect-[21/9]">
-              <m.div
-                className="absolute inset-0"
-                initial={reduced ? false : { scale: 1.08 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <Image
-                  src={project.image.src}
-                  alt={project.image.alt}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 768px"
-                  className="object-cover"
-                />
-              </m.div>
+            <div className="group relative aspect-[16/9] w-full overflow-hidden border-b border-line sm:aspect-[21/9]">
+              {project.live ? (
+                <a
+                  href={project.live}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block size-full"
+                  title={`Open ${project.name} live prototype`}
+                >
+                  <m.div
+                    className="absolute inset-0"
+                    initial={reduced ? false : { scale: 1.08 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <Image
+                      src={project.image.src}
+                      alt={project.image.alt}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 768px"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </m.div>
+                  <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full border border-line bg-bg/90 px-3 py-1 text-xs font-semibold text-ink backdrop-blur shadow-sm transition-colors group-hover:border-accent group-hover:text-accent">
+                    <span>Open prototype</span>
+                    <span aria-hidden="true">↗</span>
+                  </span>
+                </a>
+              ) : (
+                <m.div
+                  className="absolute inset-0"
+                  initial={reduced ? false : { scale: 1.08 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Image
+                    src={project.image.src}
+                    alt={project.image.alt}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 768px"
+                    className="object-cover"
+                  />
+                </m.div>
+              )}
               <button
                 ref={closeRef}
                 type="button"
                 onClick={onClose}
                 aria-label="Close case study"
-                className="absolute right-4 top-4 grid size-9 place-items-center rounded-full border border-line bg-bg/90 text-ink backdrop-blur transition-colors hover:border-muted"
+                className="absolute right-4 top-4 z-10 grid size-9 place-items-center rounded-full border border-line bg-bg/90 text-ink backdrop-blur transition-colors hover:border-muted"
               >
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                   <path d="M6 6l12 12M18 6L6 18" />
@@ -265,18 +316,30 @@ function ProjectModal({ project, onClose }: { project: Project | null; onClose: 
                 </div>
               </dl>
 
-              {project.repo ? (
-                <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                {project.live ? (
+                  <a
+                    href={project.live}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-bg transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
+                  >
+                    <span>Open live prototype</span>
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                ) : null}
+                {project.repo ? (
                   <a
                     href={project.repo}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-muted"
+                    className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-muted hover:text-accent"
                   >
-                    View repo ↗
+                    <span>View repository</span>
+                    <span aria-hidden="true">↗</span>
                   </a>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
           </m.div>
         </m.div>
