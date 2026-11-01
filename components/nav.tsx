@@ -122,6 +122,15 @@ export function Nav() {
                 </a>
               );
             })}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("shuv:open-palette"))}
+              aria-label="Open command palette"
+              title="Command palette (⌘K)"
+              className="hidden items-center gap-1.5 rounded-md border border-line px-2 py-1 font-mono text-[10px] text-muted transition-colors hover:border-accent/50 hover:text-accent lg:flex"
+            >
+              ⌘K
+            </button>
             <ThemeToggle />
           </nav>
 

@@ -179,7 +179,7 @@ export function GithubActivity() {
   const gridTemplate = `repeat(${columns}, ${CELL}px)`;
 
   return (
-    <section aria-label="GitHub activity" className="py-20 sm:py-28">
+    <section id="github" aria-label="GitHub activity" className="py-20 sm:py-28">
       <HairLine />
       <div className="mx-auto max-w-content px-5 sm:px-8">
         <p className="mb-3 text-xs font-medium uppercase tracking-[0.22em] text-accent">

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Preloader } from "@/components/preloader";
 import { Terminal } from "@/components/terminal";
+import { CommandPalette } from "@/components/command-palette";
 import { Nav } from "@/components/nav";
 import { site, socials } from "@/data/content";
 
@@ -105,6 +106,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-bg font-body text-ink antialiased">
         <Preloader />
         <Terminal />
+        <CommandPalette />
         <Providers>
           <Nav />
           {children}
