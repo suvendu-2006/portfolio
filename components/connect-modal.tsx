@@ -215,6 +215,14 @@ export function ConnectWithMe() {
     setOpen(true);
   };
 
+  // the terminal's `book` command hands over to the scheduler
+  useEffect(() => {
+    const onOpen = () => openModal();
+    window.addEventListener("shuv:open-booking", onOpen);
+    return () => window.removeEventListener("shuv:open-booking", onOpen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // completing a booking clears the whole ritual — the next click asks for
   // the name again, fresh, not the same one
   const completeAndReset = () => {

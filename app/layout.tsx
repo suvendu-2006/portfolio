@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Caveat, Inter, Playfair_Display } from "next/font/
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Preloader } from "@/components/preloader";
+import { Terminal } from "@/components/terminal";
 import { Nav } from "@/components/nav";
 import { site, socials } from "@/data/content";
 
@@ -103,6 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-bg font-body text-ink antialiased">
         <Preloader />
+        <Terminal />
         <Providers>
           <Nav />
           {children}
