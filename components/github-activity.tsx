@@ -5,6 +5,7 @@ import { githubUser } from "@/data/content";
 import { HairLine } from "@/components/hairline";
 import { MaskReveal } from "@/components/mask-reveal";
 import { DrawLine } from "@/components/draw-line";
+import { CodingStatus } from "@/components/coding-status";
 
 interface Day {
   date: string;
@@ -55,6 +56,51 @@ export function GithubActivity() {
     flipBelow: boolean;
   } | null>(null);
   const gridWrapperRef = useRef<HTMLDivElement>(null);
+
+  // first view: the cells cascade in as a wave across the year,
+  // and the total counts up alongside them
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  const [instant, setInstant] = useState(false);
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setInstant(true);
+      setShown(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setShown(true);
+        io.disconnect();
+      },
+      { rootMargin: "0px 0px -10% 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!shown || !data) return;
+    if (instant) {
+      setCount(data.total);
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const dur = 1300;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / dur);
+      setCount(Math.round((1 - Math.pow(1 - p, 3)) * data.total));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [shown, data, instant]);
 
   const showTooltip = (day: Day, el: HTMLElement) => {
     const container = gridWrapperRef.current;
@@ -155,7 +201,7 @@ export function GithubActivity() {
           something.
         </p>
 
-        <div className="rounded-2xl border border-line bg-panel/50 p-5 sm:p-6">
+        <div ref={panelRef} className="rounded-2xl border border-line bg-panel/50 p-5 sm:p-6">
           {failed ? (
             <p className="py-8 text-center text-sm text-muted">
               GitHub is not responding right now —{" "}
@@ -174,7 +220,7 @@ export function GithubActivity() {
               <p className="font-display text-lg font-bold text-ink sm:text-xl" aria-live="polite">
                 {data ? (
                   <>
-                    {data.total.toLocaleString("en-IN")}{" "}
+                    {count.toLocaleString("en-IN")}{" "}
                     <span className="font-medium text-muted">
                       contributions in {year}
                     </span>
@@ -183,6 +229,10 @@ export function GithubActivity() {
                   <span className="inline-block h-6 w-52 animate-pulse rounded-md bg-line/70" />
                 )}
               </p>
+
+              <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+                <CodingStatus />
+              </div>
 
               <div className="scroll-contain mt-5 overflow-x-auto pb-1 [scrollbar-width:thin]">
                 <div
@@ -218,18 +268,36 @@ export function GithubActivity() {
                       (week, w) =>
                         week.map((day, d) => {
                           const key = `${w}-${d}`;
+                          const delay = instant ? 0 : Math.min(w * 14 + d * 8, 850);
                           if (!day)
-                            return <span key={key} className="rounded-[3px]" style={{ width: CELL, height: CELL }} />;
+                            return (
+                              <span
+                                key={key}
+                                className={`transition-[opacity,transform] duration-300 ease-out ${
+                                  shown ? "scale-100 opacity-100" : "scale-50 opacity-0"
+                                }`}
+                                style={{ transitionDelay: `${delay}ms` }}
+                              >
+                                <span className="block rounded-[3px]" style={{ width: CELL, height: CELL }} />
+                              </span>
+                            );
                           return (
                             <span
                               key={key}
-                              onMouseEnter={(e) => showTooltip(day, e.currentTarget)}
-                              onTouchStart={(e) => showTooltip(day, e.currentTarget)}
-                              className={`rounded-[3px] transition-all duration-150 cursor-pointer ${
-                                data ? LEVEL_BG[Math.min(day.level, 4)] : "bg-line/40"
-                              } hover:scale-125 hover:ring-2 hover:ring-accent hover:z-20`}
-                              style={{ width: CELL, height: CELL }}
-                            />
+                              className={`transition-[opacity,transform] duration-300 ease-out ${
+                                shown ? "scale-100 opacity-100" : "scale-50 opacity-0"
+                              }`}
+                              style={{ transitionDelay: `${delay}ms` }}
+                            >
+                              <span
+                                onMouseEnter={(e) => showTooltip(day, e.currentTarget)}
+                                onTouchStart={(e) => showTooltip(day, e.currentTarget)}
+                                className={`block rounded-[3px] transition-all duration-150 cursor-pointer ${
+                                  data ? LEVEL_BG[Math.min(day.level, 4)] : "bg-line/40"
+                                } hover:scale-125 hover:ring-2 hover:ring-accent hover:z-20`}
+                                style={{ width: CELL, height: CELL }}
+                              />
+                            </span>
                           );
                         })
                     )}
