@@ -14,12 +14,12 @@ interface Track {
 
 const VERIFIED_LAST_TRACK: Track = {
   playing: false,
-  title: "Woman",
-  artist: "Doja Cat",
-  art: "https://i.scdn.co/image/ab67616d0000b27314b7b2a920a41166d53ddd49",
-  url: "https://open.spotify.com/track/6Uj1ctrBOjOas8xZXGqKk4",
+  title: "One Love",
+  artist: "Shubh",
+  art: "https://i.scdn.co/image/ab67616d0000b273d7eb20034ff1c7b7bb3629de",
+  url: "https://open.spotify.com/track/5ZLkihi6DVsHwDL3B8ym1t",
   progressMs: null,
-  durationMs: 172626,
+  durationMs: 159222,
 };
 
 /** The official Spotify mark. */
@@ -41,7 +41,13 @@ export function SpotifyLogo({ className }: { className?: string }) {
  */
 export function SpotifyBrand() {
   const [track, setTrack] = useState<Track>(VERIFIED_LAST_TRACK);
+  const trackRef = useRef<Track>(track);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inFlightRef = useRef(false);
+
+  useEffect(() => {
+    trackRef.current = track;
+  }, [track]);
 
   // Restore the real last played track from localStorage on client load
   useEffect(() => {
@@ -59,6 +65,8 @@ export function SpotifyBrand() {
   }, []);
 
   const poll = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     try {
       const res = await fetch(`/api/spotify?_t=${Date.now()}`, {
         cache: "no-store",
@@ -94,6 +102,8 @@ export function SpotifyBrand() {
       }
     } catch {
       /* preserve existing track on transient network blip */
+    } finally {
+      inFlightRef.current = false;
     }
   }, []);
 
@@ -107,8 +117,18 @@ export function SpotifyBrand() {
         await poll();
       }
       if (active) {
-        // Smart adaptive interval: 3.5s while playing, 12s when idle
-        const delay = track?.playing ? 3500 : 12000;
+        const current = trackRef.current;
+        // Low-latency polling: 1500ms when playing, 2500ms when idle/paused
+        let delay = current?.playing ? 1500 : 2500;
+
+        // If the current track is about to finish, snap polling to track end
+        if (current?.playing && current.durationMs && current.progressMs) {
+          const remaining = current.durationMs - current.progressMs;
+          if (remaining > 200 && remaining < delay) {
+            delay = remaining + 200;
+          }
+        }
+
         timerId = setTimeout(tick, delay);
       }
     };
@@ -130,7 +150,7 @@ export function SpotifyBrand() {
       window.removeEventListener("focus", onVisibilityOrFocus);
       document.removeEventListener("visibilitychange", onVisibilityOrFocus);
     };
-  }, [poll, track?.playing]);
+  }, [poll]);
 
   const albumArtLogo = (
     <div

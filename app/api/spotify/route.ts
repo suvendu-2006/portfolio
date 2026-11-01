@@ -45,12 +45,12 @@ export interface TrackResponse {
 
 const VERIFIED_RECENT_TRACK: TrackResponse = {
   playing: false,
-  title: "Woman",
-  artist: "Doja Cat",
-  art: "https://i.scdn.co/image/ab67616d0000b27314b7b2a920a41166d53ddd49",
-  url: "https://open.spotify.com/track/6Uj1ctrBOjOas8xZXGqKk4",
+  title: "One Love",
+  artist: "Shubh",
+  art: "https://i.scdn.co/image/ab67616d0000b273d7eb20034ff1c7b7bb3629de",
+  url: "https://open.spotify.com/track/5ZLkihi6DVsHwDL3B8ym1t",
   progressMs: null,
-  durationMs: 172626,
+  durationMs: 159222,
 };
 
 let lastKnownTrack: TrackResponse = VERIFIED_RECENT_TRACK;
@@ -124,8 +124,8 @@ export async function GET() {
   }
 
   try {
-    // Micro-cache to prevent duplicate hits from simultaneous client events
-    const cacheTtl = cached.body?.playing ? 1000 : 3000;
+    // Low-latency micro-cache to prevent duplicate hits from simultaneous bursts
+    const cacheTtl = 500;
     if (cached.body && Date.now() - cached.at < cacheTtl) {
       return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
     }
@@ -152,9 +152,18 @@ export async function GET() {
       }
     }
 
+    // If currently-playing was active earlier but now stopped/idle, flip it to paused immediately
+    if (lastKnownTrack && lastKnownTrack.playing) {
+      lastKnownTrack = {
+        ...lastKnownTrack,
+        playing: false,
+        progressMs: null,
+      };
+    }
+
     // 2. If idle (204 or no active track), fetch real recently-played history from Spotify
     const now = Date.now();
-    if (now - lastRecentlyPlayedFetchAt > 60000 && now > retryAfterUntil) {
+    if (now - lastRecentlyPlayedFetchAt > 15000 && now > retryAfterUntil) {
       lastRecentlyPlayedFetchAt = now;
       try {
         const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=3", {
