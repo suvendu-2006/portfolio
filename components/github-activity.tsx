@@ -74,9 +74,8 @@ export function GithubActivity() {
     }
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting) return;
-        setShown(true);
-        io.disconnect();
+        // the wave REPLAYS every time the section re-enters the viewport
+        setShown(entry.isIntersecting);
       },
       { rootMargin: "0px 0px -10% 0px" }
     );
@@ -269,11 +268,16 @@ export function GithubActivity() {
                         week.map((day, d) => {
                           const key = `${year}-${w}-${d}`;
                           const delay = instant ? 0 : Math.min(w * 14 + d * 8, 850);
+                          // the cascade only starts once the panel is on screen —
+                          // gated by the same IO that drives the count-up
+                          const cellAnim = shown
+                            ? "animate-[cell-in_.35s_cubic-bezier(0.22,1,0.36,1)_both]"
+                            : "opacity-0";
                           if (!day)
                             return (
                               <span
                                 key={key}
-                                className="animate-[cell-in_.35s_cubic-bezier(0.22,1,0.36,1)_both] rounded-[3px]"
+                                className={`rounded-[3px] ${cellAnim}`}
                                 style={{ width: CELL, height: CELL, animationDelay: `${delay}ms` }}
                               >
                                 <span className="block" style={{ width: CELL, height: CELL }} />
@@ -282,7 +286,7 @@ export function GithubActivity() {
                           return (
                             <span
                               key={key}
-                              className="animate-[cell-in_.35s_cubic-bezier(0.22,1,0.36,1)_both]"
+                              className={cellAnim}
                               style={{ width: CELL, height: CELL, animationDelay: `${delay}ms` }}
                             >
                               <span
