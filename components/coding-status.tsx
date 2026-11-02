@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 
 interface WakaState {
   totalText: string;
@@ -23,50 +23,93 @@ interface PushState {
  * Live developer status — displays real editor work time
  * alongside shipping activity from GitHub.
  *
- * Polled regularly without placeholder or fake states.
+ * Real-time responsive updates with 0 CDN cache delay.
  */
 export function CodingStatus() {
   const [waka, setWaka] = useState<WakaState | null>(null);
   const [wakaHidden, setWakaHidden] = useState(false);
+  const [displaySeconds, setDisplaySeconds] = useState<number | null>(null);
+
+  const lastSyncRef = useRef<{ totalSeconds: number; syncedAt: number; active: boolean }>({
+    totalSeconds: 0,
+    syncedAt: 0,
+    active: false,
+  });
 
   const [github, setGithub] = useState<PushState | null>(null);
   const [githubHidden, setGithubHidden] = useState(false);
 
+  const loadWaka = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/wakatime?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { Pragma: "no-cache" },
+      });
+      if (res.status === 501 || !res.ok) {
+        setWakaHidden(true);
+        return;
+      }
+      const d = await res.json();
+      if (d.totalText !== undefined) {
+        const secs = Number(d.totalSeconds ?? 0);
+        const isActive = !!d.activeNow;
+        setWaka({
+          totalText: d.totalText,
+          hours: d.hours ?? 0,
+          minutes: d.minutes ?? 0,
+          totalSeconds: secs,
+          activeNow: isActive,
+          topProject: d.topProject ?? null,
+          languages: Array.isArray(d.languages) ? d.languages : [],
+        });
+        lastSyncRef.current = {
+          totalSeconds: secs,
+          syncedAt: Date.now(),
+          active: isActive,
+        };
+        setDisplaySeconds(secs);
+        setWakaHidden(false);
+      }
+    } catch {
+      /* keep last state on transient network issues */
+    }
+  }, []);
+
   useEffect(() => {
-    let alive = true;
-    const loadWaka = async () => {
-      try {
-        const res = await fetch("/api/wakatime");
-        if (res.status === 501 || !res.ok) {
-          if (alive) setWakaHidden(true);
-          return;
-        }
-        const d = await res.json();
-        if (!alive) return;
-        if (d.totalText !== undefined) {
-          setWaka({
-            totalText: d.totalText,
-            hours: d.hours ?? 0,
-            minutes: d.minutes ?? 0,
-            totalSeconds: d.totalSeconds ?? 0,
-            activeNow: !!d.activeNow,
-            topProject: d.topProject ?? null,
-            languages: Array.isArray(d.languages) ? d.languages : [],
-          });
-          setWakaHidden(false);
-        }
-      } catch {
-        /* keep last state on transient network issues */
+    loadWaka();
+    // Fast 15-second re-poll when page is open
+    const id = window.setInterval(loadWaka, 15000);
+
+    const onFocusOrVisible = () => {
+      if (document.visibilityState === "visible") {
+        loadWaka();
       }
     };
 
-    loadWaka();
-    const id = window.setInterval(loadWaka, 60000);
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+
     return () => {
-      alive = false;
       window.clearInterval(id);
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
     };
-  }, []);
+  }, [loadWaka]);
+
+  // While user is actively coding, tick the live duration in real time
+  useEffect(() => {
+    if (!waka?.activeNow) return;
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      const { totalSeconds, syncedAt, active } = lastSyncRef.current;
+      if (!active) return;
+      const elapsed = Math.floor((Date.now() - syncedAt) / 1000);
+      setDisplaySeconds(totalSeconds + elapsed);
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [waka?.activeNow]);
 
   useEffect(() => {
     let alive = true;
@@ -99,8 +142,16 @@ export function CodingStatus() {
     };
   }, []);
 
-  const showWaka = !wakaHidden && waka !== null && waka.totalSeconds > 0;
+  const totalSecs = displaySeconds ?? (waka ? waka.totalSeconds : 0);
+  const showWaka = !wakaHidden && waka !== null && totalSecs > 0;
   const showGithub = !githubHidden && github !== null;
+
+  const currentHours = Math.floor(totalSecs / 3600);
+  const currentMinutes = Math.round((totalSecs % 3600) / 60);
+  const displayText =
+    currentHours > 0
+      ? `${currentHours}h ${String(currentMinutes).padStart(2, "0")}m`
+      : `${currentMinutes}m`;
 
   if (!showWaka && !showGithub) return null;
 
@@ -117,7 +168,7 @@ export function CodingStatus() {
             aria-hidden="true"
           />
           <span className="font-display text-base font-bold text-ink">
-            {waka.totalText}
+            {displayText}
           </span>
           <span className="text-xs text-muted">coded today</span>
         </div>

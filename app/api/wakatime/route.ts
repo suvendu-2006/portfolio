@@ -3,6 +3,15 @@
  * Filters out "AI Coding" to report only hands-on keyboard coding time.
  */
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+  Pragma: "no-cache",
+  Expires: "0",
+};
+
 interface StatusBarResponse {
   cached_at?: string;
   data?: {
@@ -30,6 +39,8 @@ interface StatusBarResponse {
   };
 }
 
+let memCache: { at: number; data: any } = { at: 0, data: null };
+
 export async function GET() {
   const apiKey = process.env.WAKATIME_API_KEY?.trim();
   if (!apiKey) {
@@ -43,8 +54,13 @@ export async function GET() {
         topProject: null,
         languages: [],
       },
-      { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+      { headers: NO_CACHE_HEADERS }
     );
+  }
+
+  // 10-second micro-cache to avoid hitting WakaTime rate limits on fast client re-polls
+  if (memCache.data && Date.now() - memCache.at < 10000) {
+    return Response.json(memCache.data, { headers: NO_CACHE_HEADERS });
   }
 
   try {
@@ -52,12 +68,16 @@ export async function GET() {
     const res = await fetch("https://wakatime.com/api/v1/users/current/status_bar/today", {
       headers: {
         Authorization: `Basic ${basicAuth}`,
+        "Cache-Control": "no-cache",
       },
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
 
     if (!res.ok) {
-      return Response.json({ error: "wakatime_unavailable" }, { status: 502 });
+      if (memCache.data) {
+        return Response.json(memCache.data, { headers: NO_CACHE_HEADERS });
+      }
+      return Response.json({ error: "wakatime_unavailable" }, { status: 502, headers: NO_CACHE_HEADERS });
     }
 
     const json = (await res.json()) as StatusBarResponse;
@@ -86,21 +106,25 @@ export async function GET() {
       : [];
 
     const cachedAt = json.cached_at ? new Date(json.cached_at).getTime() : 0;
-    const activeNow = totalSeconds > 0 && Date.now() - cachedAt < 10 * 60 * 1000;
+    const activeNow = totalSeconds > 0 && (cachedAt === 0 || Date.now() - cachedAt < 25 * 60 * 1000);
 
-    return Response.json(
-      {
-        totalText,
-        hours,
-        minutes,
-        totalSeconds,
-        activeNow,
-        topProject,
-        languages,
-      },
-      { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
-    );
+    const payload = {
+      totalText,
+      hours,
+      minutes,
+      totalSeconds,
+      activeNow,
+      topProject,
+      languages,
+      fetchedAt: Date.now(),
+    };
+
+    memCache = { at: Date.now(), data: payload };
+    return Response.json(payload, { headers: NO_CACHE_HEADERS });
   } catch {
-    return Response.json({ error: "wakatime_unavailable" }, { status: 502 });
+    if (memCache.data) {
+      return Response.json(memCache.data, { headers: NO_CACHE_HEADERS });
+    }
+    return Response.json({ error: "wakatime_unavailable" }, { status: 502, headers: NO_CACHE_HEADERS });
   }
 }
