@@ -15,6 +15,7 @@ interface WakaState {
 interface PushState {
   pushesWeek: number;
   commitsWeek: number;
+  commitsToday: number;
   lastPushHoursAgo: number | null;
   lastPushRepo: string | null;
 }
@@ -115,7 +116,9 @@ export function CodingStatus() {
     let alive = true;
     const loadGithub = async () => {
       try {
-        const res = await fetch("/api/github-events");
+        const res = await fetch(`/api/github-events?_t=${Date.now()}`, {
+          cache: "no-store",
+        });
         if (!res.ok) {
           if (alive) setGithubHidden(true);
           return;
@@ -125,6 +128,7 @@ export function CodingStatus() {
         setGithub({
           pushesWeek: d.pushesWeek ?? 0,
           commitsWeek: d.commitsWeek ?? 0,
+          commitsToday: d.commitsToday ?? 0,
           lastPushHoursAgo: d.lastPushHoursAgo ?? null,
           lastPushRepo: d.lastPushRepo ?? null,
         });
@@ -135,10 +139,22 @@ export function CodingStatus() {
     };
 
     loadGithub();
-    const id = window.setInterval(loadGithub, 300000);
+    const id = window.setInterval(loadGithub, 60000);
+
+    const onFocusOrVisible = () => {
+      if (document.visibilityState === "visible") {
+        loadGithub();
+      }
+    };
+
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+
     return () => {
       alive = false;
       window.clearInterval(id);
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
     };
   }, []);
 
@@ -178,7 +194,7 @@ export function CodingStatus() {
         <div className="inline-flex items-center gap-2.5 rounded-xl border border-line bg-panel/90 px-4 py-2.5 sm:px-5 sm:py-3">
           <span
             className={`size-2 shrink-0 rounded-full ${
-              github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 3
+              github.commitsToday > 0 || (github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 3)
                 ? "animate-pulse bg-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.6)]"
                 : github.lastPushHoursAgo !== null && github.lastPushHoursAgo < 24
                   ? "bg-accent/70"
@@ -187,9 +203,13 @@ export function CodingStatus() {
             aria-hidden="true"
           />
           <span className="font-display text-base font-bold text-ink">
-            {github.pushesWeek} {github.pushesWeek === 1 ? "push" : "pushes"}
+            {github.commitsToday > 0
+              ? `${github.commitsToday} ${github.commitsToday === 1 ? "commit" : "commits"}`
+              : `${github.pushesWeek} ${github.pushesWeek === 1 ? "push" : "pushes"}`}
           </span>
-          <span className="text-xs text-muted">this week on GitHub</span>
+          <span className="text-xs text-muted">
+            {github.commitsToday > 0 ? "today on GitHub" : "this week on GitHub"}
+          </span>
         </div>
       ) : null}
     </div>

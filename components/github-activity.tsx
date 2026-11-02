@@ -56,6 +56,14 @@ export function GithubActivity() {
     flipBelow: boolean;
   } | null>(null);
   const gridWrapperRef = useRef<HTMLDivElement>(null);
+  const scrollWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll the calendar so the current date (November) is in view on load
+  useEffect(() => {
+    if (data && scrollWrapperRef.current) {
+      scrollWrapperRef.current.scrollLeft = scrollWrapperRef.current.scrollWidth;
+    }
+  }, [data]);
 
   // first view: the cells cascade in as a wave across the year,
   // and the total counts up alongside them
@@ -233,7 +241,10 @@ export function GithubActivity() {
                 <CodingStatus />
               </div>
 
-              <div className="scroll-contain mt-5 overflow-x-auto pb-1 [scrollbar-width:thin]">
+              <div
+                ref={scrollWrapperRef}
+                className="scroll-contain mt-5 overflow-x-auto pb-1 [scrollbar-width:thin]"
+              >
                 <div
                   ref={gridWrapperRef}
                   onMouseLeave={() => setTooltip(null)}
@@ -283,6 +294,15 @@ export function GithubActivity() {
                                 <span className="block" style={{ width: CELL, height: CELL }} />
                               </span>
                             );
+
+                          const todayStr = new Intl.DateTimeFormat("en-CA", {
+                            timeZone: "Asia/Kolkata",
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          }).format(new Date());
+                          const isToday = day.date === todayStr;
+
                           return (
                             <span
                               key={key}
@@ -294,6 +314,10 @@ export function GithubActivity() {
                                 onTouchStart={(e) => showTooltip(day, e.currentTarget)}
                                 className={`block rounded-[3px] transition-all duration-150 cursor-pointer ${
                                   data ? LEVEL_BG[Math.min(day.level, 4)] : "bg-line/40"
+                                } ${
+                                  isToday
+                                    ? "ring-1 ring-accent ring-offset-1 ring-offset-panel shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)]"
+                                    : ""
                                 } hover:scale-125 hover:ring-2 hover:ring-accent hover:z-20`}
                                 style={{ width: CELL, height: CELL }}
                               />
