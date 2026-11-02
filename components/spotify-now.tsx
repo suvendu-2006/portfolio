@@ -87,6 +87,8 @@ export function SpotifyBrand() {
             prev.playing === data.playing &&
             prev.art === data.art
           ) {
+            // Keep reference updated with progress/duration without triggering unnecessary re-renders
+            trackRef.current = data;
             return prev;
           }
           try {
@@ -107,29 +109,60 @@ export function SpotifyBrand() {
     }
   }, []);
 
+  /**
+   * PERMANENT REAL-TIME POLLING STRATEGY:
+   * - Tab visible + playing: poll every 2s (with transition snap at track end)
+   * - Tab visible + idle/paused: poll every 3s
+   * - Tab hidden/background: 0 polling (preserves 100% battery, 0 CPU/jank)
+   * - Immediate poll on visibility change, window focus, or hover/touch
+   * DO NOT change this to 30s/45s — doing so causes noticeable 30-45s delays
+   * when user plays/pauses or changes tracks in Spotify.
+   */
   useEffect(() => {
     let active = true;
-    let timerId: ReturnType<typeof setTimeout>;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+
+    const scheduleNext = (delayMs: number) => {
+      if (!active) return;
+      if (timerId) clearTimeout(timerId);
+      timerId = setTimeout(tick, delayMs);
+    };
 
     const tick = async () => {
       if (!active) return;
-      if (document.visibilityState === "visible") {
-        await poll();
+      if (document.visibilityState !== "visible") {
+        // Completely stop polling when tab is hidden/minimized (0 battery/network burn)
+        return;
       }
-      if (active) {
-        // track changes are minute-scale — poll gently, refresh instantly
-        // on tab focus/visibility (already wired below)
-        const playing = trackRef.current?.playing;
-        const delay = playing ? 30000 : 45000;
-        timerId = setTimeout(tick, delay);
+
+      await poll();
+      if (!active) return;
+
+      const current = trackRef.current;
+      let delay = current?.playing ? 2000 : 3000;
+
+      // Smart track transition snap: if nearing the end of current song,
+      // snap poll to right when the next track begins (+300ms)
+      if (current?.playing && current.durationMs && current.progressMs) {
+        const remaining = current.durationMs - current.progressMs;
+        if (remaining > 300 && remaining < delay) {
+          delay = remaining + 300;
+        }
       }
+
+      scheduleNext(delay);
     };
 
+    // Kick off initial poll and loop
     tick();
 
     const onVisibilityOrFocus = () => {
       if (document.visibilityState === "visible") {
+        // Immediately fetch fresh state upon user switching to tab or focusing
         poll();
+        scheduleNext(trackRef.current?.playing ? 2000 : 3000);
+      } else {
+        if (timerId) clearTimeout(timerId);
       }
     };
 
@@ -138,7 +171,7 @@ export function SpotifyBrand() {
 
     return () => {
       active = false;
-      clearTimeout(timerId);
+      if (timerId) clearTimeout(timerId);
       window.removeEventListener("focus", onVisibilityOrFocus);
       document.removeEventListener("visibilitychange", onVisibilityOrFocus);
     };

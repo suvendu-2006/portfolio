@@ -130,6 +130,13 @@ export async function GET() {
       return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
     }
 
+    const now = Date.now();
+    if (now < retryAfterUntil) {
+      return Response.json(cached.body || lastKnownTrack || VERIFIED_RECENT_TRACK, {
+        headers: NO_CACHE_HEADERS,
+      });
+    }
+
     const token = await getAccessToken(clientId, clientSecret, refreshToken);
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -138,6 +145,15 @@ export async function GET() {
       headers,
       cache: "no-store",
     });
+
+    if (playingRes.status === 429) {
+      const retryHeader = playingRes.headers.get("retry-after");
+      const retrySec = retryHeader ? Math.max(1, parseInt(retryHeader, 10)) : 30;
+      retryAfterUntil = now + retrySec * 1000;
+      return Response.json(cached.body || lastKnownTrack || VERIFIED_RECENT_TRACK, {
+        headers: NO_CACHE_HEADERS,
+      });
+    }
 
     if (playingRes.status === 200) {
       const data = await playingRes.json().catch(() => null);
@@ -162,8 +178,7 @@ export async function GET() {
     }
 
     // 2. If idle (204 or no active track), fetch real recently-played history from Spotify
-    const now = Date.now();
-    if (now - lastRecentlyPlayedFetchAt > 15000 && now > retryAfterUntil) {
+    if (now - lastRecentlyPlayedFetchAt > 4000 && now > retryAfterUntil) {
       lastRecentlyPlayedFetchAt = now;
       try {
         const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=3", {
@@ -182,7 +197,7 @@ export async function GET() {
           }
         } else if (recentRes.status === 429) {
           const retryHeader = recentRes.headers.get("retry-after");
-          const retrySec = retryHeader ? parseInt(retryHeader, 10) : 1800;
+          const retrySec = retryHeader ? Math.max(1, parseInt(retryHeader, 10)) : 30;
           retryAfterUntil = now + retrySec * 1000;
         }
       } catch {
