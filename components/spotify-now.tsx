@@ -10,6 +10,7 @@ interface Track {
   art?: string;
   progressMs?: number | null;
   durationMs?: number | null;
+  idle?: boolean;
 }
 
 const VERIFIED_LAST_TRACK: Track = {
@@ -44,6 +45,7 @@ export function SpotifyBrand() {
   const trackRef = useRef<Track>(track);
   const containerRef = useRef<HTMLDivElement>(null);
   const inFlightRef = useRef(false);
+  const idleCountRef = useRef(0);
 
   useEffect(() => {
     trackRef.current = track;
@@ -72,14 +74,20 @@ export function SpotifyBrand() {
         cache: "no-store",
         headers: { Pragma: "no-cache" },
       });
-      if (res.status === 501) {
-        return;
-      }
+      if (res.status === 501) return;
       if (!res.ok) return;
 
-      const data = await res.json();
-      if (data && data.title) {
-        // Genuine track from Spotify!
+      const data: Track = await res.json();
+      if (!data) return;
+
+      const current = trackRef.current;
+      const isGenericFallback =
+        data.idle ||
+        (data.title === VERIFIED_LAST_TRACK.title && data.artist === VERIFIED_LAST_TRACK.artist);
+
+      // Scenario 1: Active playback detected from Spotify!
+      if (data.playing && data.title) {
+        idleCountRef.current = 0;
         setTrack((prev) => {
           if (
             prev &&
@@ -87,20 +95,58 @@ export function SpotifyBrand() {
             prev.playing === data.playing &&
             prev.art === data.art
           ) {
-            // Keep reference updated with progress/duration without triggering unnecessary re-renders
             trackRef.current = data;
             return prev;
           }
           try {
             localStorage.setItem("shuv_spotify_track", JSON.stringify(data));
-          } catch {
-            /* ignore storage write error */
-          }
+          } catch {}
           return data;
         });
-      } else if (data && !data.title) {
-        // Spotify is idle and history is empty/throttled: retain real song marked as Recently played
-        setTrack((prev) => (prev ? { ...prev, playing: false } : VERIFIED_LAST_TRACK));
+        return;
+      }
+
+      // Scenario 2: Song changed while paused/recently played
+      if (data.title && !isGenericFallback && data.title !== current?.title) {
+        idleCountRef.current = 0;
+        const newTrack = { ...data, playing: false };
+        setTrack(newTrack);
+        try {
+          localStorage.setItem("shuv_spotify_track", JSON.stringify(newTrack));
+        } catch {}
+        return;
+      }
+
+      // Scenario 3: Player is idle or transiently paused (e.g. mobile buffer gap or song change)
+      if (!data.playing) {
+        // If server sent a generic fallback ("One Love"), NEVER wipe out the user's real track!
+        const hasRealTrack =
+          current && current.title && current.title !== VERIFIED_LAST_TRACK.title;
+
+        if (current?.playing) {
+          // Debounce transient 204 drops during mobile track switching (require 2 consecutive idle polls)
+          idleCountRef.current += 1;
+          if (idleCountRef.current < 2) {
+            return;
+          }
+        }
+
+        setTrack((prev) => {
+          if (!prev) return VERIFIED_LAST_TRACK;
+          const targetTrack = hasRealTrack
+            ? { ...prev, playing: false }
+            : !isGenericFallback && data.title
+            ? { ...data, playing: false }
+            : prev;
+
+          if (prev.playing === targetTrack.playing && prev.title === targetTrack.title) {
+            return prev;
+          }
+          try {
+            localStorage.setItem("shuv_spotify_track", JSON.stringify(targetTrack));
+          } catch {}
+          return targetTrack;
+        });
       }
     } catch {
       /* preserve existing track on transient network blip */
@@ -110,13 +156,11 @@ export function SpotifyBrand() {
   }, []);
 
   /**
-   * PERMANENT REAL-TIME POLLING STRATEGY:
-   * - Tab visible + playing: poll every 2s (with transition snap at track end)
-   * - Tab visible + idle/paused: poll every 3s
+   * REAL-TIME ADAPTIVE POLLING STRATEGY:
+   * - Tab visible + playing: poll every 2.5s (with transition snap at track end)
+   * - Tab visible + idle/paused: poll every 3.5s
    * - Tab hidden/background: 0 polling (preserves 100% battery, 0 CPU/jank)
-   * - Immediate poll on visibility change, window focus, or hover/touch
-   * DO NOT change this to 30s/45s — doing so causes noticeable 30-45s delays
-   * when user plays/pauses or changes tracks in Spotify.
+   * - Immediate poll on visibility change or window focus
    */
   useEffect(() => {
     let active = true;
@@ -130,19 +174,15 @@ export function SpotifyBrand() {
 
     const tick = async () => {
       if (!active) return;
-      if (document.visibilityState !== "visible") {
-        // Completely stop polling when tab is hidden/minimized (0 battery/network burn)
-        return;
-      }
+      if (document.visibilityState !== "visible") return;
 
       await poll();
       if (!active) return;
 
       const current = trackRef.current;
-      let delay = current?.playing ? 2000 : 3000;
+      let delay = current?.playing ? 2500 : 3500;
 
-      // Smart track transition snap: if nearing the end of current song,
-      // snap poll to right when the next track begins (+300ms)
+      // Smart track transition snap: if nearing end of song, poll right at track completion (+300ms)
       if (current?.playing && current.durationMs && current.progressMs) {
         const remaining = current.durationMs - current.progressMs;
         if (remaining > 300 && remaining < delay) {
@@ -153,14 +193,13 @@ export function SpotifyBrand() {
       scheduleNext(delay);
     };
 
-    // Kick off initial poll and loop
+    // Initial poll
     tick();
 
     const onVisibilityOrFocus = () => {
       if (document.visibilityState === "visible") {
-        // Immediately fetch fresh state upon user switching to tab or focusing
         poll();
-        scheduleNext(trackRef.current?.playing ? 2000 : 3000);
+        scheduleNext(trackRef.current?.playing ? 2500 : 3500);
       } else {
         if (timerId) clearTimeout(timerId);
       }
@@ -212,7 +251,6 @@ export function SpotifyBrand() {
     <div
       ref={containerRef}
       onMouseEnter={poll}
-      onTouchStart={poll}
       className="relative flex min-w-0 shrink items-center gap-2 cursor-default select-none sm:shrink-0 sm:gap-2.5"
     >
       {albumArtLogo}
