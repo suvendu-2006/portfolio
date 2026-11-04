@@ -10,29 +10,24 @@ import { site, socials } from "@/data/content";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
   variable: "--font-display",
   display: "swap",
 });
 
 const body = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
   variable: "--font-body",
   display: "swap",
 });
 
 const serif = Playfair_Display({
   subsets: ["latin"],
-  weight: ["500"],
-  style: ["normal", "italic"],
   variable: "--font-serif",
   display: "swap",
 });
 
 const hand = Caveat({
   subsets: ["latin"],
-  weight: ["600"],
   variable: "--font-hand",
   display: "swap",
 });
