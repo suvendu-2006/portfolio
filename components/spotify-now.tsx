@@ -15,12 +15,12 @@ interface Track {
 
 const VERIFIED_LAST_TRACK: Track = {
   playing: false,
-  title: "One Love",
-  artist: "Shubh",
-  art: "https://i.scdn.co/image/ab67616d0000b273d7eb20034ff1c7b7bb3629de",
-  url: "https://open.spotify.com/track/5ZLkihi6DVsHwDL3B8ym1t",
+  title: "Shiv Tandav Stotram",
+  artist: "Shankar Mahadevan",
+  art: "https://i.scdn.co/image/ab67616d0000b27363521cf4f0ca24a244f26e8b",
+  url: "https://open.spotify.com/track/6NFAlpTFpLrYBrsFuiloH3",
   progressMs: null,
-  durationMs: 159222,
+  durationMs: 553430,
 };
 
 /** The official Spotify mark. */
