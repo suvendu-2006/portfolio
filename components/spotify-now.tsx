@@ -119,7 +119,7 @@ export function SpotifyBrand() {
 
       // Scenario 3: Player is idle or transiently paused (e.g. mobile buffer gap or song change)
       if (!data.playing) {
-        // If server sent a generic fallback ("One Love"), NEVER wipe out the user's real track!
+        // Never wipe out the user's real track with a generic fallback!
         const hasRealTrack =
           current && current.title && current.title !== VERIFIED_LAST_TRACK.title;
 
