@@ -116,7 +116,7 @@ export function QuoteDust({ author }: { author: string }) {
       for (let y = 0; y < canvas.height; y += STEP * dpr) {
         for (let x = 0; x < canvas.width; x += STEP * dpr) {
           const i = (Math.round(y) * canvas.width + Math.round(x)) * 4 + 3;
-          if (data[i] > 90) {
+          if (data[i] > 110) {
             pts.push({
               tx: x / dpr,
               ty: y / dpr,
@@ -129,7 +129,6 @@ export function QuoteDust({ author }: { author: string }) {
           }
         }
       }
-      ctx.clearRect(0, 0, width, cssH);
       return pts;
     };
 
@@ -247,9 +246,15 @@ export function QuoteDust({ author }: { author: string }) {
       raf = requestAnimationFrame(tick);
     };
 
+    const onResize = () => {
+      if (disposed) return;
+      setup();
+      startAssemble(performance.now());
+    };
+    window.addEventListener("resize", onResize);
+
     const start = () => {
       cancelAnimationFrame(raf);
-      window.addEventListener("resize", start);
       setup();
       if (reduced) {
         // reduced motion: no moving particles — a static dot-matrix quote
@@ -271,7 +276,7 @@ export function QuoteDust({ author }: { author: string }) {
           disposed = true;
           window.clearInterval(cycle);
           themeObserver.disconnect();
-          window.removeEventListener("resize", start);
+          window.removeEventListener("resize", onResize);
         };
       }
       const firstFamily = getFontFamily();
@@ -288,7 +293,7 @@ export function QuoteDust({ author }: { author: string }) {
         cancelAnimationFrame(raf);
         visibility.disconnect();
         themeObserver.disconnect();
-        window.removeEventListener("resize", start);
+        window.removeEventListener("resize", onResize);
       };
     };
 

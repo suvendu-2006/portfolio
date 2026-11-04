@@ -55,7 +55,8 @@ const VERIFIED_RECENT_TRACK: TrackResponse = {
 
 let lastKnownTrack: TrackResponse = VERIFIED_RECENT_TRACK;
 let lastRecentlyPlayedFetchAt = 0;
-let retryAfterUntil = 0;
+let cpRetryUntil = 0;
+let rpRetryUntil = 0;
 let cached: { at: number; body: TrackResponse | null } = { at: 0, body: null };
 let accessToken: string | null = null;
 let tokenExpiry = 0;
@@ -124,61 +125,55 @@ export async function GET() {
   }
 
   try {
-    // Low-latency micro-cache to prevent duplicate hits from simultaneous bursts
-    const cacheTtl = 500;
-    if (cached.body && Date.now() - cached.at < cacheTtl) {
-      return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
-    }
-
     const now = Date.now();
-    if (now < retryAfterUntil) {
-      return Response.json(cached.body || lastKnownTrack || VERIFIED_RECENT_TRACK, {
-        headers: NO_CACHE_HEADERS,
-      });
+
+    // Micro-cache to absorb simultaneous duplicate requests (300ms)
+    if (cached.body && now - cached.at < 300) {
+      return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
     }
 
     const token = await getAccessToken(clientId, clientSecret, refreshToken);
     const headers = { Authorization: `Bearer ${token}` };
 
-    // 1. Check currently active/paused track in player first (real-time live)
-    const playingRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-      headers,
-      cache: "no-store",
-    });
-
-    if (playingRes.status === 429) {
-      const retryHeader = playingRes.headers.get("retry-after");
-      const retrySec = retryHeader ? Math.max(1, parseInt(retryHeader, 10)) : 30;
-      retryAfterUntil = now + retrySec * 1000;
-      return Response.json(cached.body || lastKnownTrack || VERIFIED_RECENT_TRACK, {
-        headers: NO_CACHE_HEADERS,
+    // 1. ALWAYS query currently-playing (handles both playing & paused tracks)
+    if (now >= cpRetryUntil) {
+      const playingRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+        headers,
+        cache: "no-store",
       });
-    }
 
-    if (playingRes.status === 200) {
-      const data = await playingRes.json().catch(() => null);
-      if (data && data.item) {
-        const isPlaying = Boolean(data.is_playing);
-        const mapped = mapTrack(data.item, isPlaying, data.progress_ms);
-        if (mapped && mapped.title) {
-          lastKnownTrack = mapped;
-          cached = { at: Date.now(), body: mapped };
-          return Response.json(cached.body, { headers: NO_CACHE_HEADERS });
+      if (playingRes.status === 429) {
+        const retryHeader = playingRes.headers.get("retry-after");
+        const retrySec = retryHeader ? Math.min(parseInt(retryHeader, 10), 30) : 10;
+        cpRetryUntil = now + retrySec * 1000;
+      } else if (playingRes.status === 200) {
+        const data = await playingRes.json().catch(() => null);
+        if (data && data.item) {
+          const isPlaying = Boolean(data.is_playing);
+          const mapped = mapTrack(data.item, isPlaying, data.progress_ms);
+          if (mapped && mapped.title) {
+            lastKnownTrack = mapped;
+            cached = { at: now, body: mapped };
+            return Response.json(mapped, { headers: NO_CACHE_HEADERS });
+          }
         }
       }
     }
 
-    // If currently-playing was active earlier but now stopped/idle, flip it to paused immediately
-    if (lastKnownTrack && lastKnownTrack.playing) {
-      lastKnownTrack = {
+    // 2. If player is idle (status 204 or no active track):
+    // If we already know the track from earlier in this session, serve it as Recently played
+    if (lastKnownTrack && lastKnownTrack.title && lastKnownTrack !== VERIFIED_RECENT_TRACK) {
+      const idlePayload: TrackResponse = {
         ...lastKnownTrack,
         playing: false,
         progressMs: null,
       };
+      cached = { at: now, body: idlePayload };
+      return Response.json(idlePayload, { headers: NO_CACHE_HEADERS });
     }
 
-    // 2. If idle (204 or no active track), fetch real recently-played history from Spotify
-    if (now - lastRecentlyPlayedFetchAt > 4000 && now > retryAfterUntil) {
+    // 3. Fallback: Query recently-played only on cold start, throttled to at most once per 5 minutes
+    if (now - lastRecentlyPlayedFetchAt > 300000 && now >= rpRetryUntil) {
       lastRecentlyPlayedFetchAt = now;
       try {
         const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=3", {
@@ -196,22 +191,23 @@ export async function GET() {
             }
           }
         } else if (recentRes.status === 429) {
+          // Cap rate-limit backoff to max 60s (never let Spotify's 16h header lock us out)
           const retryHeader = recentRes.headers.get("retry-after");
-          const retrySec = retryHeader ? Math.max(1, parseInt(retryHeader, 10)) : 30;
-          retryAfterUntil = now + retrySec * 1000;
+          const retrySec = retryHeader ? Math.min(parseInt(retryHeader, 10), 60) : 30;
+          rpRetryUntil = now + retrySec * 1000;
         }
       } catch {
         // preserve lastKnownTrack
       }
     }
 
-    // Serve the verified track as Recently played
+    // Serve the best known track as Recently played
     const idlePayload: TrackResponse = {
       ...(lastKnownTrack || VERIFIED_RECENT_TRACK),
       playing: false,
       progressMs: null,
     };
-    cached = { at: Date.now(), body: idlePayload };
+    cached = { at: now, body: idlePayload };
     return Response.json(idlePayload, { headers: NO_CACHE_HEADERS });
   } catch (err) {
     console.error("Spotify API route error:", err);
