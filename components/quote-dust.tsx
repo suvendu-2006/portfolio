@@ -5,8 +5,8 @@ import { phelpsQuotes } from "@/data/content";
 
 const STEP = 2; // px between sampled particles
 const HOLD_MS = 3000; // hold crisp text for 3 seconds
-const DUST_MS = 1100; // smooth dissolve sweep
-const ASSEMBLE_MS = 850; // smooth particle assembly sweep
+const DUST_MS = 1600; // gentler, smoother dissolve sweep
+const ASSEMBLE_MS = 1000; // smooth particle assembly sweep
 
 interface ParticleTarget {
   x: number;
@@ -222,9 +222,9 @@ export function QuoteDust({ author }: { author: string }) {
         ty: tgt.y,
         origX: tgt.x,
         origY: tgt.y,
-        vx: (Math.random() - 0.5) * 2.2,
-        vy: -0.4 + (Math.random() - 0.5) * 1.6,
-        delay: tgt.stagger * 220 + Math.random() * 60,
+        vx: (Math.random() - 0.5) * 1.6,
+        vy: -0.35 + (Math.random() - 0.5) * 1.3,
+        delay: tgt.stagger * 280 + Math.random() * 70,
       }));
       phase = "dust";
       t0 = now;
@@ -304,8 +304,8 @@ export function QuoteDust({ author }: { author: string }) {
         // phase === "dust"
         const elapsed = now - t0;
 
-        // Crisp text fades out quickly in first 300ms
-        const crispFade = Math.max(0, 1 - elapsed / 300);
+        // Crisp text dissolves softly in first 480ms
+        const crispFade = Math.max(0, 1 - elapsed / 480);
         if (crispFade > 0) {
           drawCrisp(idx, crispFade);
         }
@@ -317,9 +317,9 @@ export function QuoteDust({ author }: { author: string }) {
             ctx.globalAlpha = 1;
             ctx.fillRect(p.tx, p.ty, 2, 2);
           } else {
-            const sweep = Math.pow(local, 1.35);
-            const px = p.tx + p.vx * 95 * sweep;
-            const py = p.ty + p.vy * 45 * sweep + 28 * Math.pow(local, 1.8);
+            const sweep = Math.pow(local, 1.3);
+            const px = p.tx + p.vx * 85 * sweep;
+            const py = p.ty + p.vy * 38 * sweep + 24 * Math.pow(local, 1.75);
             ctx.globalAlpha = Math.max(0, 1 - local);
             ctx.fillRect(px, py, 2, 2);
           }
