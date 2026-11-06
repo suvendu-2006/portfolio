@@ -5,7 +5,7 @@ export const revalidate = 0;
 
 /**
  * Cached proxy for public GitHub push activity + direct commits from the
- * active repos. Computes today's live commit count alongside 7-day stats.
+ * active repos. Computes this month's live commit count alongside today & weekly stats.
  */
 const ACTIVE_REPOS = ["portfolio", "mplads-intelligence-portal", "allcited"];
 
@@ -23,76 +23,129 @@ export async function GET() {
   }
 
   try {
-    const weekAgo = new Date(now - 7 * 86400_000).toISOString();
-
-    // Start of today in Asia/Kolkata timezone (UTC + 5:30)
+    // Start of today and start of current month in Asia/Kolkata timezone (UTC + 5:30)
     const kolkataOffsetMs = 5.5 * 3600 * 1000;
     const kolkataNow = new Date(now + kolkataOffsetMs);
+    const currentYear = kolkataNow.getUTCFullYear();
+    const currentMonthNum = kolkataNow.getUTCMonth() + 1;
+    const currentMonthPrefix = `${currentYear}-${String(currentMonthNum).padStart(2, "0")}`;
+    const todayIsoDate = `${currentMonthPrefix}-${String(kolkataNow.getUTCDate()).padStart(2, "0")}`;
+
     const todayStartKolkata = new Date(
       Date.UTC(kolkataNow.getUTCFullYear(), kolkataNow.getUTCMonth(), kolkataNow.getUTCDate()) -
         kolkataOffsetMs
     ).getTime();
 
-    const [eventsRes, ...commitRes] = await Promise.all([
+    const monthStartKolkata = new Date(
+      Date.UTC(kolkataNow.getUTCFullYear(), kolkataNow.getUTCMonth(), 1) -
+        kolkataOffsetMs
+    ).getTime();
+
+    const weekAgoMs = now - 7 * 86400_000;
+    const sinceIso = new Date(Math.min(monthStartKolkata, weekAgoMs)).toISOString();
+
+    const [eventsRes, calendarRes, ...commitRes] = await Promise.all([
       fetch(`https://api.github.com/users/${githubUser}/events/public?per_page=30`, {
         headers: UA,
         cache: "no-store",
-      }),
+      }).catch(() => null),
+      fetch(`https://github-contributions-api.jogruber.de/v4/${githubUser}?y=${currentYear}`, {
+        cache: "no-store",
+      }).catch(() => null),
       ...ACTIVE_REPOS.map((repo) =>
         fetch(
-          `https://api.github.com/repos/${githubUser}/${repo}/commits?since=${weekAgo}&per_page=100`,
+          `https://api.github.com/repos/${githubUser}/${repo}/commits?since=${sinceIso}&per_page=100`,
           { headers: UA, cache: "no-store" }
-        )
+        ).catch(() => null)
       ),
     ]);
 
+    let calendarMonthCommits = 0;
+    let calendarTodayCommits = 0;
+    if (calendarRes && calendarRes.ok) {
+      try {
+        const calData = await calendarRes.json();
+        if (Array.isArray(calData?.contributions)) {
+          for (const item of calData.contributions) {
+            if (typeof item.date === "string" && item.date.startsWith(currentMonthPrefix)) {
+              calendarMonthCommits += Number(item.count || 0);
+            }
+            if (item.date === todayIsoDate) {
+              calendarTodayCommits = Number(item.count || 0);
+            }
+          }
+        }
+      } catch {
+        /* fallback to live repo commits */
+      }
+    }
+
     let pushesWeek = 0;
-    let eventsCommits = 0;
+    let eventsCommitsWeek = 0;
+    let eventsCommitsMonth = 0;
     let lastPushAt: string | null = null;
     let lastPushRepo: string | null = null;
 
-    if (eventsRes.ok) {
-      const events = (await eventsRes.json()) as Array<{
-        type: string;
-        created_at: string;
-        repo?: { name: string };
-        payload?: { size?: number };
-      }>;
-      for (const e of events) {
-        const at = new Date(e.created_at).getTime();
-        if (now - at > 7 * 86400_000) break;
-        if (e.type === "PushEvent") {
-          pushesWeek += 1;
-          eventsCommits += e.payload?.size ?? 0;
-          if (!lastPushAt) {
-            lastPushAt = e.created_at;
-            lastPushRepo = e.repo?.name.split("/")[1] ?? null;
+    if (eventsRes && eventsRes.ok) {
+      try {
+        const events = (await eventsRes.json()) as Array<{
+          type: string;
+          created_at: string;
+          repo?: { name: string };
+          payload?: { size?: number };
+        }>;
+        if (Array.isArray(events)) {
+          for (const e of events) {
+            const at = new Date(e.created_at).getTime();
+            if (e.type === "PushEvent") {
+              const count = e.payload?.size ?? 1;
+              if (now - at <= 7 * 86400_000) {
+                pushesWeek += 1;
+                eventsCommitsWeek += count;
+              }
+              if (at >= monthStartKolkata) {
+                eventsCommitsMonth += count;
+              }
+              if (!lastPushAt) {
+                lastPushAt = e.created_at;
+                lastPushRepo = e.repo?.name.split("/")[1] ?? null;
+              }
+            }
           }
         }
+      } catch {
+        /* ignore parse errors */
       }
     }
 
     // Direct commits from the active repos
-    let repoCommits = 0;
-    let commitsToday = 0;
+    let repoCommitsWeek = 0;
+    let repoCommitsMonth = 0;
+    let repoCommitsToday = 0;
     let repoLastAt: string | null = null;
     let repoLastName: string | null = null;
 
     const commitLists = await Promise.all(
       commitRes.map((r, i) =>
-        r.ok
+        r && r.ok
           ? (r.json() as Promise<Array<{ commit: { author: { date: string } } }>>).catch(() => [])
           : Promise.resolve([])
-      ).map((p, i) => p.then((list) => ({ list, repo: ACTIVE_REPOS[i] })))
+      ).map((p, i) => p.then((list) => ({ list: Array.isArray(list) ? list : [], repo: ACTIVE_REPOS[i] })))
     );
 
     for (const { list, repo } of commitLists) {
       for (const c of list) {
-        repoCommits += 1;
-        const at = c.commit.author.date;
+        const at = c.commit?.author?.date;
+        if (!at) continue;
         const atMs = new Date(at).getTime();
+        if (atMs >= weekAgoMs) {
+          repoCommitsWeek += 1;
+        }
+        if (atMs >= monthStartKolkata) {
+          repoCommitsMonth += 1;
+        }
         if (atMs >= todayStartKolkata) {
-          commitsToday += 1;
+          repoCommitsToday += 1;
         }
         if (!repoLastAt || at > repoLastAt) {
           repoLastAt = at;
@@ -101,7 +154,10 @@ export async function GET() {
       }
     }
 
-    const commitsWeek = eventsCommits + repoCommits;
+    const commitsWeek = Math.max(eventsCommitsWeek + repoCommitsWeek, 0);
+    const commitsToday = Math.max(calendarTodayCommits, repoCommitsToday);
+    const commitsMonth = Math.max(calendarMonthCommits, repoCommitsMonth, eventsCommitsMonth);
+
     const lastPushAtFinal =
       repoLastAt && (!lastPushAt || repoLastAt > lastPushAt) ? repoLastAt : lastPushAt;
     const lastPushHoursAgo = lastPushAtFinal
@@ -114,6 +170,7 @@ export async function GET() {
       pushesWeek,
       commitsWeek,
       commitsToday,
+      commitsMonth,
       lastPushHoursAgo,
       lastPushRepo: lastPushRepoName,
     };

@@ -16,6 +16,7 @@ interface PushState {
   pushesWeek: number;
   commitsWeek: number;
   commitsToday: number;
+  commitsMonth: number;
   lastPushHoursAgo: number | null;
   lastPushRepo: string | null;
 }
@@ -129,6 +130,7 @@ export function CodingStatus() {
           pushesWeek: d.pushesWeek ?? 0,
           commitsWeek: d.commitsWeek ?? 0,
           commitsToday: d.commitsToday ?? 0,
+          commitsMonth: d.commitsMonth ?? 0,
           lastPushHoursAgo: d.lastPushHoursAgo ?? null,
           lastPushRepo: d.lastPushRepo ?? null,
         });
@@ -203,12 +205,12 @@ export function CodingStatus() {
             aria-hidden="true"
           />
           <span className="font-display text-base font-bold text-ink">
-            {github.commitsToday > 0
-              ? `${github.commitsToday} ${github.commitsToday === 1 ? "commit" : "commits"}`
+            {github.commitsMonth > 0
+              ? `${github.commitsMonth} ${github.commitsMonth === 1 ? "commit" : "commits"}`
               : `${github.pushesWeek} ${github.pushesWeek === 1 ? "push" : "pushes"}`}
           </span>
           <span className="text-xs text-muted">
-            {github.commitsToday > 0 ? "today on GitHub" : "this week on GitHub"}
+            {github.commitsMonth > 0 ? "this month on GitHub" : "this week on GitHub"}
           </span>
         </div>
       ) : null}
