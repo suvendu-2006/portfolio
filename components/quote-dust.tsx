@@ -3,10 +3,10 @@
 import { useEffect, useRef } from "react";
 import { phelpsQuotes } from "@/data/content";
 
-const STEP = 2; // px between sampled particles
-const HOLD_MS = 3000; // hold crisp text for 3 seconds
-const DUST_MS = 1600; // gentler, smoother dissolve sweep
-const ASSEMBLE_MS = 1000; // smooth particle assembly sweep
+const STEP = 1.5; // Fine-grained sampling for dense, crisp particles
+const HOLD_MS = 3000; // Hold crisp text for exactly 3 seconds
+const DUST_MS = 1400; // Organic, gentle dissolve sweep
+const ASSEMBLE_MS = 950; // Smooth particle assembly sweep
 
 interface ParticleTarget {
   x: number;
@@ -30,14 +30,11 @@ interface QuoteData {
 }
 
 /**
- * Rotating quotes rendered on a high-performance canvas:
+ * Rotating quotes rendered on a high-performance, non-blocking canvas:
  * 1. Holds crisp Playfair Display quote for 3 seconds.
  * 2. Dissolves in an organic staggered dust sweep.
  * 3. Immediately transitions into the next quote as particles converge.
- * 4. Zero empty/stuck gap between dissolve and next quote.
- *
- * Pre-samples particle coordinates on setup so requestAnimationFrame
- * never stalls on getImageData. Fully optimized for dark and light modes.
+ * 4. Zero frozen states, zero stalls on tab switch/sleep with watchdog recovery.
  */
 export function QuoteDust({ author }: { author: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -84,6 +81,8 @@ export function QuoteDust({ author }: { author: string }) {
     let holdUntil = performance.now() + HOLD_MS;
     let raf = 0;
     let disposed = false;
+    let inView = true;
+    let lastTick = performance.now();
 
     const setFont = () => {
       const family = getFontFamily();
@@ -127,16 +126,14 @@ export function QuoteDust({ author }: { author: string }) {
     };
 
     const setup = () => {
-      width = canvas.clientWidth || (canvas.parentElement?.clientWidth ?? 320);
-      if (width <= 0) width = 320;
+      const newWidth = canvas.clientWidth || (canvas.parentElement?.clientWidth ?? 320);
+      width = Math.max(280, newWidth);
       dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-      // Responsive font size
       fontSize = Math.round(Math.max(16, Math.min(21, width * 0.036)));
       lineHeight = Math.round(fontSize * 1.72);
       setFont();
 
-      // Wrap all quotes with curly quotes
       const maxTextWidth = Math.max(260, width - 24);
       const wrappedQuotes = phelpsQuotes.map((q) => wrapQuote(`“${q}”`, maxTextWidth));
       const maxLines = Math.max(...wrappedQuotes.map((lines) => lines.length), 1);
@@ -148,7 +145,7 @@ export function QuoteDust({ author }: { author: string }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       setFont();
 
-      // Pre-sample particle coordinates for each quote (zero getImageData during rAF!)
+      // Pre-sample particle coordinates with high sensitivity (>70 alpha) so thin serifs never clip
       quotesData = wrappedQuotes.map((lines) => {
         ctx.clearRect(0, 0, width, cssH);
         ctx.fillStyle = "#ffffff";
@@ -168,7 +165,7 @@ export function QuoteDust({ author }: { author: string }) {
         for (let y = 0; y < canvas.height; y += step) {
           for (let x = 0; x < canvas.width; x += step) {
             const pixelIdx = (Math.round(y) * canvas.width + Math.round(x)) * 4 + 3;
-            if (imgData[pixelIdx] > 110) {
+            if (imgData[pixelIdx] > 70) {
               const canvasX = x / dpr;
               const canvasY = y / dpr;
               targets.push({
@@ -186,7 +183,9 @@ export function QuoteDust({ author }: { author: string }) {
     };
 
     const startAssemble = (targetIdx: number, now: number) => {
-      const quote = quotesData[targetIdx];
+      idx = targetIdx;
+      if (srRef.current) srRef.current.textContent = phelpsQuotes[idx];
+      const quote = quotesData[idx];
       if (!quote || quote.targets.length === 0) {
         phase = "hold";
         holdUntil = now + HOLD_MS;
@@ -194,15 +193,15 @@ export function QuoteDust({ author }: { author: string }) {
       }
       activeParticles = quote.targets.map((tgt) => {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 30 + Math.random() * 70;
+        const dist = 30 + Math.random() * 65;
         return {
           tx: tgt.x,
           ty: tgt.y,
           origX: tgt.x + Math.cos(angle) * dist,
           origY: tgt.y + Math.sin(angle) * dist,
-          vx: (Math.random() - 0.5) * 1.8,
-          vy: Math.random() * 1.4 - 0.7,
-          delay: tgt.stagger * 200 + Math.random() * 50,
+          vx: (Math.random() - 0.5) * 1.6,
+          vy: Math.random() * 1.2 - 0.6,
+          delay: tgt.stagger * 180 + Math.random() * 45,
         };
       });
       phase = "in";
@@ -212,9 +211,7 @@ export function QuoteDust({ author }: { author: string }) {
     const startDust = (now: number) => {
       const quote = quotesData[idx];
       if (!quote || quote.targets.length === 0) {
-        idx = (idx + 1) % phelpsQuotes.length;
-        if (srRef.current) srRef.current.textContent = phelpsQuotes[idx];
-        startAssemble(idx, now);
+        startAssemble((idx + 1) % phelpsQuotes.length, now);
         return;
       }
       activeParticles = quote.targets.map((tgt) => ({
@@ -222,43 +219,31 @@ export function QuoteDust({ author }: { author: string }) {
         ty: tgt.y,
         origX: tgt.x,
         origY: tgt.y,
-        vx: (Math.random() - 0.5) * 1.6,
-        vy: -0.35 + (Math.random() - 0.5) * 1.3,
-        delay: tgt.stagger * 280 + Math.random() * 70,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: -0.3 + (Math.random() - 0.5) * 1.2,
+        delay: tgt.stagger * 240 + Math.random() * 60,
       }));
       phase = "dust";
       t0 = now;
     };
 
-    // Pause animation only when the browser tab is hidden to save CPU/battery
-    let hiddenAt: number | null = null;
-    const onVisibilityChange = () => {
-      if (document.hidden) {
-        hiddenAt = performance.now();
-      } else if (hiddenAt !== null) {
-        const delta = performance.now() - hiddenAt;
-        hiddenAt = null;
-        t0 += delta;
-        holdUntil += delta;
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    // Re-render immediately on theme change
-    const themeObserver = new MutationObserver(() => {
-      if (phase === "hold") {
-        ctx.clearRect(0, 0, width, cssH);
-        drawCrisp(idx, 1);
-      }
-    });
-    themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-
     const tick = (now: number) => {
       if (disposed) return;
-      if (document.hidden) {
+      lastTick = now;
+
+      if (document.hidden || !inView) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+
+      // Hard watchdog: if any phase has stalled longer than 7 seconds, auto-recover smoothly
+      if (now - t0 > 7000) {
+        phase = "hold";
+        holdUntil = now + HOLD_MS;
+        t0 = now;
+        activeParticles = [];
+        ctx.clearRect(0, 0, width, cssH);
+        drawCrisp(idx, 1);
         raf = requestAnimationFrame(tick);
         return;
       }
@@ -268,34 +253,37 @@ export function QuoteDust({ author }: { author: string }) {
 
       if (phase === "in") {
         const elapsed = now - t0;
-        let allDone = true;
+        const overallProg = Math.min(1, elapsed / ASSEMBLE_MS);
+        const eProg = easeOutCubic(overallProg);
 
         for (const p of activeParticles) {
-          const local = Math.max(0, Math.min(1, (elapsed - p.delay) / ASSEMBLE_MS));
-          if (local < 1) allDone = false;
+          const local = Math.max(0, Math.min(1, (elapsed - p.delay) / (ASSEMBLE_MS * 0.85)));
           const e = easeOutCubic(local);
 
           const curX = p.tx + (p.origX - p.tx) * (1 - e);
           const curY = p.ty + (p.origY - p.ty) * (1 - e);
 
-          // Incoming particles are immediately visible and converge smoothly
-          const crispFade = Math.max(0, Math.min(1, (e - 0.4) / 0.6));
-          ctx.globalAlpha = Math.min(1, 0.25 + 0.75 * e) * (1 - crispFade);
+          // Particles smoothly fade out as crisp text takes over
+          const pAlpha = Math.max(0, 1 - Math.max(0, (eProg - 0.3) / 0.7));
+          ctx.globalAlpha = pAlpha;
           ctx.fillRect(curX, curY, 2, 2);
         }
 
-        // Crisp text fades in seamlessly as particles arrive
-        const overallProg = Math.min(1, elapsed / (ASSEMBLE_MS + 200));
-        const crispAlpha = Math.max(0, Math.min(1, (overallProg - 0.4) / 0.6));
+        // Crisp text smoothly materializes
+        const crispAlpha = Math.max(0, Math.min(1, (eProg - 0.25) / 0.75));
         if (crispAlpha > 0) {
           drawCrisp(idx, crispAlpha);
         }
 
-        if (allDone && overallProg >= 1) {
+        if (overallProg >= 1) {
           phase = "hold";
           holdUntil = now + HOLD_MS;
+          activeParticles = [];
+          ctx.globalAlpha = 1;
+          drawCrisp(idx, 1);
         }
       } else if (phase === "hold") {
+        ctx.globalAlpha = 1;
         drawCrisp(idx, 1);
         if (now >= holdUntil) {
           startDust(now);
@@ -304,57 +292,119 @@ export function QuoteDust({ author }: { author: string }) {
         // phase === "dust"
         const elapsed = now - t0;
 
-        // Crisp text dissolves softly in first 480ms
-        const crispFade = Math.max(0, 1 - elapsed / 480);
+        // Crisp text gently dissolves in first 400ms
+        const crispFade = Math.max(0, 1 - elapsed / 400);
         if (crispFade > 0) {
           drawCrisp(idx, crispFade);
         }
 
         for (const p of activeParticles) {
           const local = Math.max(0, Math.min(1, (elapsed - p.delay) / DUST_MS));
-          if (local <= 0) {
-            // Particle holding position until its staggered wave starts
-            ctx.globalAlpha = 1;
-            ctx.fillRect(p.tx, p.ty, 2, 2);
-          } else {
+          if (local > 0) {
             const sweep = Math.pow(local, 1.3);
-            const px = p.tx + p.vx * 85 * sweep;
-            const py = p.ty + p.vy * 38 * sweep + 24 * Math.pow(local, 1.75);
+            const px = p.tx + p.vx * 80 * sweep;
+            const py = p.ty + p.vy * 35 * sweep + 22 * Math.pow(local, 1.7);
             ctx.globalAlpha = Math.max(0, 1 - local);
             ctx.fillRect(px, py, 2, 2);
+          } else {
+            // Particle holding position until staggered dissolve wave reaches it
+            ctx.globalAlpha = Math.max(0, 1 - elapsed / 500);
+            ctx.fillRect(p.tx, p.ty, 2, 2);
           }
         }
         ctx.globalAlpha = 1;
 
-        // Seamless transition: as dust completes, immediately begin assembling next quote
         if (elapsed >= DUST_MS) {
-          idx = (idx + 1) % phelpsQuotes.length;
-          if (srRef.current) srRef.current.textContent = phelpsQuotes[idx];
-          startAssemble(idx, now);
+          startAssemble((idx + 1) % phelpsQuotes.length, now);
         }
       }
 
       raf = requestAnimationFrame(tick);
     };
 
+    // Viewport intersection observer: only animate when in or near viewport
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          inView = entry.isIntersecting;
+          if (inView) {
+            // Ensure rAF is actively looping when visible
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(tick);
+          }
+        },
+        { rootMargin: "150px" }
+      );
+      observer.observe(canvas);
+    }
+
+    // Tab visibility recovery: instantly resume crisp text and restart timer
+    const onVisibilityChange = () => {
+      if (document.hidden) return;
+      const now = performance.now();
+      t0 = now;
+      holdUntil = now + HOLD_MS;
+      phase = "hold";
+      activeParticles = [];
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, width, cssH);
+      drawCrisp(idx, 1);
+      raf = requestAnimationFrame(tick);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onVisibilityChange);
+
+    // Watchdog timer: checks every 1000ms. If rAF ever dies or gets stuck, revives it.
+    const watchdogInterval = window.setInterval(() => {
+      if (disposed) return;
+      if (!document.hidden && inView) {
+        const timeSinceLastTick = performance.now() - lastTick;
+        if (timeSinceLastTick > 600) {
+          // rAF loop stalled — revive it immediately
+          const now = performance.now();
+          t0 = now;
+          holdUntil = now + HOLD_MS;
+          phase = "hold";
+          activeParticles = [];
+          cancelAnimationFrame(raf);
+          ctx.clearRect(0, 0, width, cssH);
+          drawCrisp(idx, 1);
+          raf = requestAnimationFrame(tick);
+        }
+      }
+    }, 1000);
+
+    // Re-render immediately on theme change
+    const themeObserver = new MutationObserver(() => {
+      ctx.clearRect(0, 0, width, cssH);
+      drawCrisp(idx, 1);
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    let prevW = 0;
     const onResize = () => {
       if (disposed) return;
-      setup();
-      if (phase === "hold") {
+      const curW = canvas.clientWidth || (canvas.parentElement?.clientWidth ?? 320);
+      if (Math.abs(curW - prevW) > 6) {
+        prevW = curW;
+        setup();
         drawCrisp(idx, 1);
       }
     };
     window.addEventListener("resize", onResize);
 
     const onCanvasClick = () => {
-      if (phase === "hold") {
-        startDust(performance.now());
-      }
+      startDust(performance.now());
     };
     canvas.addEventListener("click", onCanvasClick);
 
-    // Initial boot
+    // Initial setup
     setup();
+    prevW = width;
 
     if (reduced) {
       drawCrisp(idx, 1);
@@ -368,14 +418,17 @@ export function QuoteDust({ author }: { author: string }) {
       return () => {
         disposed = true;
         clearInterval(interval);
+        clearInterval(watchdogInterval);
+        observer?.disconnect();
         themeObserver.disconnect();
         document.removeEventListener("visibilitychange", onVisibilityChange);
+        window.removeEventListener("focus", onVisibilityChange);
         window.removeEventListener("resize", onResize);
         canvas.removeEventListener("click", onCanvasClick);
       };
     }
 
-    // Start with the first quote rendered crisply, then begin rotation after 3s
+    // Start with the first quote rendered crisply
     drawCrisp(idx, 1);
     phase = "hold";
     holdUntil = performance.now() + HOLD_MS;
@@ -397,8 +450,11 @@ export function QuoteDust({ author }: { author: string }) {
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
+      clearInterval(watchdogInterval);
+      observer?.disconnect();
       themeObserver.disconnect();
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onVisibilityChange);
       window.removeEventListener("resize", onResize);
       canvas.removeEventListener("click", onCanvasClick);
     };
