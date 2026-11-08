@@ -3,10 +3,9 @@
 import { useEffect, useRef } from "react";
 import { phelpsQuotes } from "@/data/content";
 
-const STEP = 1.5; // Fine-grained sampling for dense, crisp particles
+const STEP = 1.5; // Fine-grained sampling for dense, silky dust particles
 const HOLD_MS = 3000; // Hold crisp text for exactly 3 seconds
-const DUST_MS = 1400; // Organic, gentle dissolve sweep
-const ASSEMBLE_MS = 950; // Smooth particle assembly sweep
+const TRANSITION_MS = 2200; // Total duration of overlapping dust transition
 
 interface ParticleTarget {
   x: number;
@@ -14,13 +13,20 @@ interface ParticleTarget {
   stagger: number; // 0..1 across line for progressive wave
 }
 
-interface ActiveParticle {
+interface OutgoingParticle {
+  tx: number;
+  ty: number;
+  vx: number;
+  vy: number;
+  seed: number;
+  delay: number; // ms
+}
+
+interface IncomingParticle {
   tx: number;
   ty: number;
   origX: number;
   origY: number;
-  vx: number;
-  vy: number;
   delay: number; // ms
 }
 
@@ -30,11 +36,12 @@ interface QuoteData {
 }
 
 /**
- * Rotating quotes rendered on a high-performance, non-blocking canvas:
- * 1. Holds crisp Playfair Display quote for 3 seconds.
- * 2. Dissolves in an organic staggered dust sweep.
- * 3. Immediately transitions into the next quote as particles converge.
- * 4. Zero frozen states, zero stalls on tab switch/sleep with watchdog recovery.
+ * Rotating quotes rendered on a high-performance canvas:
+ * - 3-second hold of crisp, elegant Playfair Display typography.
+ * - Buttery-smooth overlapping particle transition: the outgoing quote
+ *   dissolves into a gentle starry mist while the incoming quote simultaneously
+ *   coalesces from ambient dust, seamlessly crossfading into crisp text.
+ * - Zero abrupt cuts, zero empty gaps, fully resilient to tab switches and sleep.
  */
 export function QuoteDust({ author }: { author: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,11 +81,16 @@ export function QuoteDust({ author }: { author: string }) {
     let lineHeight = 32;
     let dpr = 1;
     let quotesData: QuoteData[] = [];
-    let idx = 0;
-    let activeParticles: ActiveParticle[] = [];
-    let phase: "in" | "hold" | "dust" = "hold";
-    let t0 = performance.now();
+    let curIdx = 0;
+    let nextIdx = 1;
+
+    let outgoingParticles: OutgoingParticle[] = [];
+    let incomingParticles: IncomingParticle[] = [];
+
+    let phase: "hold" | "transition" = "hold";
     let holdUntil = performance.now() + HOLD_MS;
+    let transStart = 0;
+
     let raf = 0;
     let disposed = false;
     let inView = true;
@@ -90,6 +102,7 @@ export function QuoteDust({ author }: { author: string }) {
     };
 
     const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+    const easeInQuad = (t: number) => t * t;
 
     const wrapQuote = (text: string, maxWidth: number) => {
       const words = text.split(" ");
@@ -145,7 +158,7 @@ export function QuoteDust({ author }: { author: string }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       setFont();
 
-      // Pre-sample particle coordinates with high sensitivity (>70 alpha) so thin serifs never clip
+      // Pre-sample particle coordinates for all quotes
       quotesData = wrappedQuotes.map((lines) => {
         ctx.clearRect(0, 0, width, cssH);
         ctx.fillStyle = "#ffffff";
@@ -165,7 +178,7 @@ export function QuoteDust({ author }: { author: string }) {
         for (let y = 0; y < canvas.height; y += step) {
           for (let x = 0; x < canvas.width; x += step) {
             const pixelIdx = (Math.round(y) * canvas.width + Math.round(x)) * 4 + 3;
-            if (imgData[pixelIdx] > 70) {
+            if (imgData[pixelIdx] > 65) {
               const canvasX = x / dpr;
               const canvasY = y / dpr;
               targets.push({
@@ -182,49 +195,43 @@ export function QuoteDust({ author }: { author: string }) {
       ctx.clearRect(0, 0, width, cssH);
     };
 
-    const startAssemble = (targetIdx: number, now: number) => {
-      idx = targetIdx;
-      if (srRef.current) srRef.current.textContent = phelpsQuotes[idx];
-      const quote = quotesData[idx];
-      if (!quote || quote.targets.length === 0) {
+    const startTransition = (now: number) => {
+      const outQuote = quotesData[curIdx];
+      nextIdx = (curIdx + 1) % phelpsQuotes.length;
+      const inQuote = quotesData[nextIdx];
+
+      if (!outQuote || !inQuote) {
+        curIdx = nextIdx;
         phase = "hold";
         holdUntil = now + HOLD_MS;
         return;
       }
-      activeParticles = quote.targets.map((tgt) => {
+
+      // Prepare outgoing dust particles
+      outgoingParticles = outQuote.targets.map((tgt) => ({
+        tx: tgt.x,
+        ty: tgt.y,
+        vx: (Math.random() - 0.5) * 1.8,
+        vy: -0.35 + (Math.random() - 0.5) * 1.3,
+        seed: Math.random() * 100,
+        delay: tgt.stagger * 350 + Math.random() * 80,
+      }));
+
+      // Prepare incoming assembling particles
+      incomingParticles = inQuote.targets.map((tgt) => {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 30 + Math.random() * 65;
+        const dist = 35 + Math.random() * 75;
         return {
           tx: tgt.x,
           ty: tgt.y,
           origX: tgt.x + Math.cos(angle) * dist,
           origY: tgt.y + Math.sin(angle) * dist,
-          vx: (Math.random() - 0.5) * 1.6,
-          vy: Math.random() * 1.2 - 0.6,
-          delay: tgt.stagger * 180 + Math.random() * 45,
+          delay: tgt.stagger * 220 + Math.random() * 60,
         };
       });
-      phase = "in";
-      t0 = now;
-    };
 
-    const startDust = (now: number) => {
-      const quote = quotesData[idx];
-      if (!quote || quote.targets.length === 0) {
-        startAssemble((idx + 1) % phelpsQuotes.length, now);
-        return;
-      }
-      activeParticles = quote.targets.map((tgt) => ({
-        tx: tgt.x,
-        ty: tgt.y,
-        origX: tgt.x,
-        origY: tgt.y,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: -0.3 + (Math.random() - 0.5) * 1.2,
-        delay: tgt.stagger * 240 + Math.random() * 60,
-      }));
-      phase = "dust";
-      t0 = now;
+      transStart = now;
+      phase = "transition";
     };
 
     const tick = (now: number) => {
@@ -236,86 +243,94 @@ export function QuoteDust({ author }: { author: string }) {
         return;
       }
 
-      // Hard watchdog: if any phase has stalled longer than 7 seconds, auto-recover smoothly
-      if (now - t0 > 7000) {
-        phase = "hold";
-        holdUntil = now + HOLD_MS;
-        t0 = now;
-        activeParticles = [];
-        ctx.clearRect(0, 0, width, cssH);
-        drawCrisp(idx, 1);
-        raf = requestAnimationFrame(tick);
-        return;
-      }
-
       ctx.clearRect(0, 0, width, cssH);
       ctx.fillStyle = getInk();
 
-      if (phase === "in") {
-        const elapsed = now - t0;
-        const overallProg = Math.min(1, elapsed / ASSEMBLE_MS);
-        const eProg = easeOutCubic(overallProg);
-
-        for (const p of activeParticles) {
-          const local = Math.max(0, Math.min(1, (elapsed - p.delay) / (ASSEMBLE_MS * 0.85)));
-          const e = easeOutCubic(local);
-
-          const curX = p.tx + (p.origX - p.tx) * (1 - e);
-          const curY = p.ty + (p.origY - p.ty) * (1 - e);
-
-          // Particles smoothly fade out as crisp text takes over
-          const pAlpha = Math.max(0, 1 - Math.max(0, (eProg - 0.3) / 0.7));
-          ctx.globalAlpha = pAlpha;
-          ctx.fillRect(curX, curY, 2, 2);
-        }
-
-        // Crisp text smoothly materializes
-        const crispAlpha = Math.max(0, Math.min(1, (eProg - 0.25) / 0.75));
-        if (crispAlpha > 0) {
-          drawCrisp(idx, crispAlpha);
-        }
-
-        if (overallProg >= 1) {
-          phase = "hold";
-          holdUntil = now + HOLD_MS;
-          activeParticles = [];
-          ctx.globalAlpha = 1;
-          drawCrisp(idx, 1);
-        }
-      } else if (phase === "hold") {
+      if (phase === "hold") {
         ctx.globalAlpha = 1;
-        drawCrisp(idx, 1);
+        drawCrisp(curIdx, 1);
         if (now >= holdUntil) {
-          startDust(now);
+          startTransition(now);
         }
       } else {
-        // phase === "dust"
-        const elapsed = now - t0;
+        // phase === "transition"
+        const elapsed = now - transStart;
 
-        // Crisp text gently dissolves in first 400ms
-        const crispFade = Math.max(0, 1 - elapsed / 400);
-        if (crispFade > 0) {
-          drawCrisp(idx, crispFade);
+        // --- 1. OUTGOING QUOTE DISSOLVE ---
+        // Crisp text of outgoing quote gently fades out in the first 500ms
+        const crispOutFade = Math.max(0, 1 - easeInQuad(Math.min(1, elapsed / 500)));
+        if (crispOutFade > 0) {
+          drawCrisp(curIdx, crispOutFade);
         }
 
-        for (const p of activeParticles) {
-          const local = Math.max(0, Math.min(1, (elapsed - p.delay) / DUST_MS));
-          if (local > 0) {
-            const sweep = Math.pow(local, 1.3);
-            const px = p.tx + p.vx * 80 * sweep;
-            const py = p.ty + p.vy * 35 * sweep + 22 * Math.pow(local, 1.7);
-            ctx.globalAlpha = Math.max(0, 1 - local);
-            ctx.fillRect(px, py, 2, 2);
+        // Outgoing dust particles drift and disperse upward and outward
+        for (const p of outgoingParticles) {
+          const localElapsed = elapsed - p.delay;
+          if (localElapsed > 0) {
+            const prog = Math.min(1, localElapsed / 1400);
+            const sweep = Math.pow(prog, 1.3);
+            const px = p.tx + p.vx * 75 * sweep + Math.sin(prog * 3.5 + p.seed) * 8;
+            const py = p.ty + p.vy * 35 * sweep - 18 * Math.pow(prog, 1.5);
+            const alpha = Math.max(0, Math.pow(1 - prog, 1.8));
+
+            if (alpha > 0.01) {
+              ctx.globalAlpha = alpha;
+              ctx.fillRect(px, py, 1.5, 1.5);
+            }
           } else {
-            // Particle holding position until staggered dissolve wave reaches it
-            ctx.globalAlpha = Math.max(0, 1 - elapsed / 500);
-            ctx.fillRect(p.tx, p.ty, 2, 2);
+            // Particle holds until staggered dissolve wave sweeps through
+            const preAlpha = Math.max(0, 1 - elapsed / 500);
+            if (preAlpha > 0.01) {
+              ctx.globalAlpha = preAlpha;
+              ctx.fillRect(p.tx, p.ty, 1.5, 1.5);
+            }
           }
         }
+
+        // --- 2. INCOMING QUOTE ASSEMBLY (Seamlessly overlapping!) ---
+        // Incoming particles start converging at 380ms into the transition
+        const inElapsed = elapsed - 380;
+        if (inElapsed > 0) {
+          const inTotalProg = Math.min(1, inElapsed / 1500);
+          const inEase = easeOutCubic(inTotalProg);
+
+          for (const p of incomingParticles) {
+            const localIn = Math.max(0, Math.min(1, (inElapsed - p.delay) / 1100));
+            const e = easeOutCubic(localIn);
+
+            const curX = p.tx + (p.origX - p.tx) * (1 - e);
+            const curY = p.ty + (p.origY - p.ty) * (1 - e);
+
+            // Particles fade in smoothly as they approach, then fade out as crisp text solidifies
+            const pFadeIn = Math.min(1, e * 1.5);
+            const pFadeOut = Math.max(0, 1 - Math.max(0, (inEase - 0.45) / 0.55));
+            const pAlpha = pFadeIn * pFadeOut;
+
+            if (pAlpha > 0.01) {
+              ctx.globalAlpha = pAlpha;
+              ctx.fillRect(curX, curY, 1.5, 1.5);
+            }
+          }
+
+          // Crisp text of incoming quote materializes smoothly as particles converge
+          const crispInAlpha = Math.max(0, Math.min(1, (inEase - 0.35) / 0.65));
+          if (crispInAlpha > 0) {
+            drawCrisp(nextIdx, Math.pow(crispInAlpha, 1.3));
+          }
+        }
+
         ctx.globalAlpha = 1;
 
-        if (elapsed >= DUST_MS) {
-          startAssemble((idx + 1) % phelpsQuotes.length, now);
+        // Transition completes at TRANSITION_MS
+        if (elapsed >= TRANSITION_MS) {
+          curIdx = nextIdx;
+          if (srRef.current) srRef.current.textContent = phelpsQuotes[curIdx];
+          phase = "hold";
+          holdUntil = now + HOLD_MS;
+          outgoingParticles = [];
+          incomingParticles = [];
+          ctx.globalAlpha = 1;
+          drawCrisp(curIdx, 1);
         }
       }
 
@@ -329,7 +344,6 @@ export function QuoteDust({ author }: { author: string }) {
         ([entry]) => {
           inView = entry.isIntersecting;
           if (inView) {
-            // Ensure rAF is actively looping when visible
             cancelAnimationFrame(raf);
             raf = requestAnimationFrame(tick);
           }
@@ -343,33 +357,32 @@ export function QuoteDust({ author }: { author: string }) {
     const onVisibilityChange = () => {
       if (document.hidden) return;
       const now = performance.now();
-      t0 = now;
       holdUntil = now + HOLD_MS;
       phase = "hold";
-      activeParticles = [];
+      outgoingParticles = [];
+      incomingParticles = [];
       cancelAnimationFrame(raf);
       ctx.clearRect(0, 0, width, cssH);
-      drawCrisp(idx, 1);
+      drawCrisp(curIdx, 1);
       raf = requestAnimationFrame(tick);
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", onVisibilityChange);
 
-    // Watchdog timer: checks every 1000ms. If rAF ever dies or gets stuck, revives it.
+    // Watchdog timer: checks every 1000ms. If rAF ever stalls, revives it seamlessly.
     const watchdogInterval = window.setInterval(() => {
       if (disposed) return;
       if (!document.hidden && inView) {
         const timeSinceLastTick = performance.now() - lastTick;
-        if (timeSinceLastTick > 600) {
-          // rAF loop stalled — revive it immediately
+        if (timeSinceLastTick > 700) {
           const now = performance.now();
-          t0 = now;
           holdUntil = now + HOLD_MS;
           phase = "hold";
-          activeParticles = [];
+          outgoingParticles = [];
+          incomingParticles = [];
           cancelAnimationFrame(raf);
           ctx.clearRect(0, 0, width, cssH);
-          drawCrisp(idx, 1);
+          drawCrisp(curIdx, 1);
           raf = requestAnimationFrame(tick);
         }
       }
@@ -378,7 +391,7 @@ export function QuoteDust({ author }: { author: string }) {
     // Re-render immediately on theme change
     const themeObserver = new MutationObserver(() => {
       ctx.clearRect(0, 0, width, cssH);
-      drawCrisp(idx, 1);
+      drawCrisp(curIdx, 1);
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
@@ -392,13 +405,15 @@ export function QuoteDust({ author }: { author: string }) {
       if (Math.abs(curW - prevW) > 6) {
         prevW = curW;
         setup();
-        drawCrisp(idx, 1);
+        drawCrisp(curIdx, 1);
       }
     };
     window.addEventListener("resize", onResize);
 
     const onCanvasClick = () => {
-      startDust(performance.now());
+      if (phase === "hold") {
+        startTransition(performance.now());
+      }
     };
     canvas.addEventListener("click", onCanvasClick);
 
@@ -407,12 +422,12 @@ export function QuoteDust({ author }: { author: string }) {
     prevW = width;
 
     if (reduced) {
-      drawCrisp(idx, 1);
+      drawCrisp(curIdx, 1);
       const interval = setInterval(() => {
-        idx = (idx + 1) % phelpsQuotes.length;
-        if (srRef.current) srRef.current.textContent = phelpsQuotes[idx];
+        curIdx = (curIdx + 1) % phelpsQuotes.length;
+        if (srRef.current) srRef.current.textContent = phelpsQuotes[curIdx];
         ctx.clearRect(0, 0, width, cssH);
-        drawCrisp(idx, 1);
+        drawCrisp(curIdx, 1);
       }, HOLD_MS);
 
       return () => {
@@ -429,7 +444,7 @@ export function QuoteDust({ author }: { author: string }) {
     }
 
     // Start with the first quote rendered crisply
-    drawCrisp(idx, 1);
+    drawCrisp(curIdx, 1);
     phase = "hold";
     holdUntil = performance.now() + HOLD_MS;
     raf = requestAnimationFrame(tick);
@@ -440,7 +455,7 @@ export function QuoteDust({ author }: { author: string }) {
         if (disposed) return;
         setup();
         if (phase === "hold") {
-          drawCrisp(idx, 1);
+          drawCrisp(curIdx, 1);
         }
       });
     }
