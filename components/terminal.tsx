@@ -88,7 +88,10 @@ export function Terminal() {
         try {
           const res = await fetch("/api/github");
           const d = await res.json();
-          const total = d.total?.[String(new Date().getFullYear())] ?? 0;
+          const total =
+            d.total?.[String(new Date().getFullYear())] ??
+            d.total?.["lastYear"] ??
+            0;
           return [
             ok(`${total} contributions in ${new Date().getFullYear()}.`, `https://github.com/${githubUser}`),
           ];

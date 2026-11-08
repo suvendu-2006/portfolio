@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { githubUser } from "@/data/content";
+import fallbackContributions from "@/data/github-contributions-fallback.json";
 import { HairLine } from "@/components/hairline";
 import { MaskReveal } from "@/components/mask-reveal";
 import { DrawLine } from "@/components/draw-line";
@@ -138,10 +139,28 @@ export function GithubActivity() {
         if (!alive) return;
         const days: Day[] = Array.isArray(d.contributions) ? d.contributions : [];
         if (!days.length) throw new Error("empty");
-        setData({ total: Number(d.total?.[String(year)] ?? 0), days });
+        const totalCount = Number(
+          d.total?.[String(year)] ??
+          d.total?.["lastYear"] ??
+          days.reduce((acc, cur) => acc + (cur.count || 0), 0)
+        );
+        setData({ total: totalCount, days });
       })
       .catch(() => {
-        if (alive) setFailed(true);
+        if (!alive) return;
+        const fallbackDays: Day[] = Array.isArray(fallbackContributions.contributions)
+          ? fallbackContributions.contributions
+          : [];
+        if (fallbackDays.length > 0) {
+          const fallbackTotal = Number(
+            (fallbackContributions.total as any)?.[String(year)] ??
+            (fallbackContributions.total as any)?.["lastYear"] ??
+            fallbackDays.reduce((acc, cur) => acc + (cur.count || 0), 0)
+          );
+          setData({ total: fallbackTotal, days: fallbackDays });
+        } else {
+          setFailed(true);
+        }
       });
     return () => {
       alive = false;

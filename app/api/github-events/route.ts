@@ -1,4 +1,5 @@
 import { githubUser } from "@/data/content";
+import fallbackContributions from "@/data/github-contributions-fallback.json";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,18 +45,25 @@ export async function GET() {
     const weekAgoMs = now - 7 * 86400_000;
     const sinceIso = new Date(Math.min(monthStartKolkata, weekAgoMs)).toISOString();
 
+    const token = process.env.GITHUB_TOKEN;
+    const authHeaders = token
+      ? { ...UA, Authorization: `Bearer ${token}` }
+      : UA;
+
     const [eventsRes, calendarRes, ...commitRes] = await Promise.all([
       fetch(`https://api.github.com/users/${githubUser}/events/public?per_page=30`, {
-        headers: UA,
+        headers: authHeaders,
         cache: "no-store",
+        signal: AbortSignal.timeout(4000),
       }).catch(() => null),
       fetch(`https://github-contributions-api.jogruber.de/v4/${githubUser}?y=${currentYear}`, {
         cache: "no-store",
+        signal: AbortSignal.timeout(3000),
       }).catch(() => null),
       ...ACTIVE_REPOS.map((repo) =>
         fetch(
           `https://api.github.com/repos/${githubUser}/${repo}/commits?since=${sinceIso}&per_page=100`,
-          { headers: UA, cache: "no-store" }
+          { headers: authHeaders, cache: "no-store", signal: AbortSignal.timeout(4000) }
         ).catch(() => null)
       ),
     ]);
@@ -76,7 +84,19 @@ export async function GET() {
           }
         }
       } catch {
-        /* fallback to live repo commits */
+        /* fallback to live repo commits or snapshot */
+      }
+    }
+
+    // Fallback to static snapshot if external calendar unavailable
+    if (calendarMonthCommits === 0 && Array.isArray(fallbackContributions.contributions)) {
+      for (const item of fallbackContributions.contributions) {
+        if (typeof item.date === "string" && item.date.startsWith(currentMonthPrefix)) {
+          calendarMonthCommits += Number(item.count || 0);
+        }
+        if (item.date === todayIsoDate) {
+          calendarTodayCommits = Number(item.count || 0);
+        }
       }
     }
 
