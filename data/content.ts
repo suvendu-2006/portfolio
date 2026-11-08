@@ -153,7 +153,7 @@ export const projects: Project[] = [
 
 /**
  * Rotating quotes above the footer wordmark — each one assembles,
- * holds for 5 seconds, then dissolves into dust (canvas particles).
+ * holds for 2 seconds, then dissolves into dust (canvas particles).
  */
 export const phelpsQuotes = [
   "You can’t put a limit on anything. The more you dream, the farther you get.",

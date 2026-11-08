@@ -4,8 +4,8 @@ import { useEffect, useRef } from "react";
 import { phelpsQuotes } from "@/data/content";
 
 const STEP = 1.5; // Fine-grained sampling for dense, silky dust particles
-const HOLD_MS = 3000; // Hold crisp text for exactly 3 seconds
-const TRANSITION_MS = 2200; // Total duration of overlapping dust transition
+const HOLD_MS = 2000; // Hold crisp text for 2 seconds before switching
+const TRANSITION_MS = 1800; // Total duration of overlapping dust transition
 
 interface ParticleTarget {
   x: number;
@@ -37,7 +37,7 @@ interface QuoteData {
 
 /**
  * Rotating quotes rendered on a high-performance canvas:
- * - 3-second hold of crisp, elegant Playfair Display typography.
+ * - 2-second hold of crisp, elegant Playfair Display typography.
  * - Buttery-smooth overlapping particle transition: the outgoing quote
  *   dissolves into a gentle starry mist while the incoming quote simultaneously
  *   coalesces from ambient dust, seamlessly crossfading into crisp text.
@@ -214,19 +214,19 @@ export function QuoteDust({ author }: { author: string }) {
         vx: (Math.random() - 0.5) * 1.8,
         vy: -0.35 + (Math.random() - 0.5) * 1.3,
         seed: Math.random() * 100,
-        delay: tgt.stagger * 350 + Math.random() * 80,
+        delay: tgt.stagger * 260 + Math.random() * 60,
       }));
 
       // Prepare incoming assembling particles
       incomingParticles = inQuote.targets.map((tgt) => {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 35 + Math.random() * 75;
+        const dist = 32 + Math.random() * 65;
         return {
           tx: tgt.x,
           ty: tgt.y,
           origX: tgt.x + Math.cos(angle) * dist,
           origY: tgt.y + Math.sin(angle) * dist,
-          delay: tgt.stagger * 220 + Math.random() * 60,
+          delay: tgt.stagger * 180 + Math.random() * 50,
         };
       });
 
@@ -257,8 +257,8 @@ export function QuoteDust({ author }: { author: string }) {
         const elapsed = now - transStart;
 
         // --- 1. OUTGOING QUOTE DISSOLVE ---
-        // Crisp text of outgoing quote gently fades out in the first 500ms
-        const crispOutFade = Math.max(0, 1 - easeInQuad(Math.min(1, elapsed / 500)));
+        // Crisp text of outgoing quote gently fades out in the first 400ms
+        const crispOutFade = Math.max(0, 1 - easeInQuad(Math.min(1, elapsed / 400)));
         if (crispOutFade > 0) {
           drawCrisp(curIdx, crispOutFade);
         }
@@ -267,10 +267,10 @@ export function QuoteDust({ author }: { author: string }) {
         for (const p of outgoingParticles) {
           const localElapsed = elapsed - p.delay;
           if (localElapsed > 0) {
-            const prog = Math.min(1, localElapsed / 1400);
+            const prog = Math.min(1, localElapsed / 1150);
             const sweep = Math.pow(prog, 1.3);
-            const px = p.tx + p.vx * 75 * sweep + Math.sin(prog * 3.5 + p.seed) * 8;
-            const py = p.ty + p.vy * 35 * sweep - 18 * Math.pow(prog, 1.5);
+            const px = p.tx + p.vx * 70 * sweep + Math.sin(prog * 3.5 + p.seed) * 8;
+            const py = p.ty + p.vy * 32 * sweep - 16 * Math.pow(prog, 1.5);
             const alpha = Math.max(0, Math.pow(1 - prog, 1.8));
 
             if (alpha > 0.01) {
@@ -279,7 +279,7 @@ export function QuoteDust({ author }: { author: string }) {
             }
           } else {
             // Particle holds until staggered dissolve wave sweeps through
-            const preAlpha = Math.max(0, 1 - elapsed / 500);
+            const preAlpha = Math.max(0, 1 - elapsed / 400);
             if (preAlpha > 0.01) {
               ctx.globalAlpha = preAlpha;
               ctx.fillRect(p.tx, p.ty, 1.5, 1.5);
@@ -288,14 +288,14 @@ export function QuoteDust({ author }: { author: string }) {
         }
 
         // --- 2. INCOMING QUOTE ASSEMBLY (Seamlessly overlapping!) ---
-        // Incoming particles start converging at 380ms into the transition
-        const inElapsed = elapsed - 380;
+        // Incoming particles start converging at 260ms into the transition
+        const inElapsed = elapsed - 260;
         if (inElapsed > 0) {
-          const inTotalProg = Math.min(1, inElapsed / 1500);
+          const inTotalProg = Math.min(1, inElapsed / 1400);
           const inEase = easeOutCubic(inTotalProg);
 
           for (const p of incomingParticles) {
-            const localIn = Math.max(0, Math.min(1, (inElapsed - p.delay) / 1100));
+            const localIn = Math.max(0, Math.min(1, (inElapsed - p.delay) / 950));
             const e = easeOutCubic(localIn);
 
             const curX = p.tx + (p.origX - p.tx) * (1 - e);
