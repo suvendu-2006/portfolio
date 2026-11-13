@@ -21,7 +21,10 @@ const VERIFIED_LAST_TRACK: Track = {
   url: "https://open.spotify.com/track/6NFAlpTFpLrYBrsFuiloH3",
   progressMs: null,
   durationMs: 553430,
+  idle: true,
 };
+
+const STORAGE_KEY = "shuv_spotify_v2";
 
 /** The official Spotify mark. */
 export function SpotifyLogo({ className }: { className?: string }) {
@@ -42,23 +45,25 @@ export function SpotifyLogo({ className }: { className?: string }) {
  */
 export function SpotifyBrand() {
   const [track, setTrack] = useState<Track>(VERIFIED_LAST_TRACK);
+  const [artFailed, setArtFailed] = useState(false);
   const trackRef = useRef<Track>(track);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLAnchorElement>(null);
   const inFlightRef = useRef(false);
-  const idleCountRef = useRef(0);
 
   useEffect(() => {
     trackRef.current = track;
+    setArtFailed(false);
   }, [track]);
 
-  // Restore the real last played track from localStorage on client load
+  // Clean up legacy localStorage cache and restore genuine cached track
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("shuv_spotify_track");
+      localStorage.removeItem("shuv_spotify_track");
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.title) {
-          setTrack((prev) => (prev?.playing ? prev : { ...parsed, playing: false }));
+          setTrack({ ...parsed, playing: false });
         }
       }
     } catch {
@@ -74,80 +79,39 @@ export function SpotifyBrand() {
         cache: "no-store",
         headers: { Pragma: "no-cache" },
       });
-      if (res.status === 501) return;
-      if (!res.ok) return;
+      if (res.status === 501 || !res.ok) return;
 
       const data: Track = await res.json();
-      if (!data) return;
+      if (!data || !data.title) return;
 
-      const current = trackRef.current;
-      const isGenericFallback =
-        data.idle ||
-        (data.title === VERIFIED_LAST_TRACK.title && data.artist === VERIFIED_LAST_TRACK.artist);
-
-      // Scenario 1: Active playback detected from Spotify!
-      if (data.playing && data.title) {
-        idleCountRef.current = 0;
+      // Handle server fallback vs genuine track
+      if (data.idle) {
         setTrack((prev) => {
-          if (
-            prev &&
-            prev.title === data.title &&
-            prev.playing === data.playing &&
-            prev.art === data.art
-          ) {
-            trackRef.current = data;
-            return prev;
+          if (prev?.title && !prev.idle) {
+            return { ...prev, playing: false };
           }
-          try {
-            localStorage.setItem("shuv_spotify_track", JSON.stringify(data));
-          } catch {}
           return data;
         });
         return;
       }
 
-      // Scenario 2: Song changed while paused/recently played
-      if (data.title && !isGenericFallback && data.title !== current?.title) {
-        idleCountRef.current = 0;
-        const newTrack = { ...data, playing: false };
-        setTrack(newTrack);
-        try {
-          localStorage.setItem("shuv_spotify_track", JSON.stringify(newTrack));
-        } catch {}
-        return;
-      }
-
-      // Scenario 3: Player is idle or transiently paused (e.g. mobile buffer gap or song change)
-      if (!data.playing) {
-        // Never wipe out the user's real track with a generic fallback!
-        const hasRealTrack =
-          current && current.title && current.title !== VERIFIED_LAST_TRACK.title;
-
-        if (current?.playing) {
-          // Debounce transient 204 drops during mobile track switching (require 2 consecutive idle polls)
-          idleCountRef.current += 1;
-          if (idleCountRef.current < 2) {
-            return;
-          }
+      // Genuine active or recently-played track from Spotify
+      setTrack((prev) => {
+        if (
+          prev &&
+          prev.title === data.title &&
+          prev.artist === data.artist &&
+          prev.playing === data.playing &&
+          prev.art === data.art
+        ) {
+          trackRef.current = data;
+          return prev;
         }
-
-        setTrack((prev) => {
-          if (!prev) return VERIFIED_LAST_TRACK;
-          const targetTrack = hasRealTrack
-            ? { ...prev, playing: false }
-            : !isGenericFallback && data.title
-            ? { ...data, playing: false }
-            : prev;
-
-          if (prev.playing === targetTrack.playing && prev.title === targetTrack.title) {
-            return prev;
-          }
-          try {
-            localStorage.setItem("shuv_spotify_track", JSON.stringify(targetTrack));
-          } catch {}
-          return targetTrack;
-        });
-      }
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch {}
+        return data;
+      });
     } catch {
       /* preserve existing track on transient network blip */
     } finally {
@@ -221,16 +185,18 @@ export function SpotifyBrand() {
       className="relative size-8 shrink-0 select-none"
       aria-label="Spotify playback indicator"
     >
-      {track?.art ? (
+      {track?.art && !artFailed ? (
         <div
           className={`relative size-8 overflow-hidden rounded-full border border-line bg-panel shadow-sm ${
-            track.playing ? "animate-[spin_8s_linear_infinite]" : ""
+            track.playing ? "animate-[spin_8s_linear_infinite] motion-reduce:animate-none" : ""
           }`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={track.art}
             alt={track.title || "Album art"}
+            referrerPolicy="no-referrer"
+            onError={() => setArtFailed(true)}
             className="size-full object-cover"
           />
           {/* Vinyl center hole */}
@@ -239,7 +205,7 @@ export function SpotifyBrand() {
       ) : (
         <SpotifyLogo className="size-[22px] shrink-0" />
       )}
-      {track?.art && (
+      {track?.art && !artFailed && (
         <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-black ring-1 ring-bg">
           <SpotifyLogo className="size-2.5" />
         </span>
@@ -248,10 +214,14 @@ export function SpotifyBrand() {
   );
 
   return (
-    <div
+    <a
       ref={containerRef}
+      href={track?.url || "https://open.spotify.com"}
+      target="_blank"
+      rel="noopener noreferrer"
       onMouseEnter={poll}
-      className="relative flex min-w-0 shrink items-center gap-2 cursor-default select-none sm:shrink-0 sm:gap-2.5"
+      className="group relative flex min-w-0 shrink items-center gap-2 select-none sm:shrink-0 sm:gap-2.5 transition-opacity hover:opacity-85"
+      title={track?.title ? `Open "${track.title}" on Spotify` : "Open Spotify"}
     >
       {albumArtLogo}
 
@@ -268,7 +238,7 @@ export function SpotifyBrand() {
               {track.playing ? "Now playing" : "Recently played"}
             </span>
           </span>
-          <span className="truncate text-xs font-semibold leading-tight text-ink sm:text-[13px]">
+          <span className="truncate text-xs font-semibold leading-tight text-ink transition-colors group-hover:text-accent sm:text-[13px]">
             {track.title}
           </span>
           {track.artist && (
@@ -282,6 +252,6 @@ export function SpotifyBrand() {
           <span>Spotify</span>
         </span>
       )}
-    </div>
+    </a>
   );
 }
