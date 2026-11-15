@@ -33,7 +33,7 @@ export function About() {
               </p>
             ))}
             <p
-              className="relative mt-8 inline-block -rotate-2 font-hand text-[clamp(30px,2.6vw,40px)] font-semibold leading-none text-ink"
+              className="relative mt-8 inline-block font-display text-[clamp(24px,2.2vw,32px)] font-bold tracking-tight text-ink"
               aria-hidden="true"
             >
               — {site.short}

@@ -98,7 +98,7 @@ export function QuoteDust({ author }: { author: string }) {
 
     const setFont = () => {
       const family = getFontFamily();
-      ctx.font = `italic 400 ${fontSize}px ${family}`;
+      ctx.font = `normal 400 ${fontSize}px ${family}`;
     };
 
     const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
