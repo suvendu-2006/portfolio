@@ -65,7 +65,7 @@ export default function OgImage() {
         >
           <span style={{ display: "flex" }}>SATARK-MPLADS</span>
           <span style={{ display: "flex", color: "#5fbdaa" }}>·</span>
-          <span style={{ display: "flex" }}>ORBIT AI</span>
+          <span style={{ display: "flex" }}>AXOM</span>
           <span style={{ display: "flex", color: "#5fbdaa" }}>·</span>
           <span style={{ display: "flex" }}>Allcited</span>
         </div>

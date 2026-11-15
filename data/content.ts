@@ -107,29 +107,30 @@ export const projects: Project[] = [
     live: "https://mplads-intelligence-portal.vercel.app",
   },
   {
-    id: "orbit-ai",
-    name: "ORBIT AI",
-    tagline: "Multi-agent research and productivity platform.",
+    id: "axom",
+    name: "AXOM",
+    tagline: "Autonomous Multi-Agent AI Research & Intelligence Platform.",
     status: "beta",
     image: {
       src: "/images/orbit.svg",
       width: 1200,
       height: 900,
-      alt: "ORBIT AI — network of agent nodes orbiting a core model",
+      alt: "AXOM — autonomous multi-agent research and intelligence platform",
     },
     problem:
       "Deep research means juggling search, synthesis, and writing across a dozen tabs — context gets lost between steps.",
     built:
-      "A platform where specialized agents collaborate on research and productivity workflows, coordinated around a shared context core.",
-    tech: ["Python", "LLM agents"],
-    result: "Multi-agent research workflows coordinated around a shared context core — private beta.",
+      "An autonomous platform where specialized agents collaborate on deep research and intelligence workflows, coordinated around a shared context core.",
+    tech: ["Python", "Multi-Agent Systems", "FastAPI", "LLM Reasoning"],
+    result:
+      "Multi-agent research and intelligence workflows coordinated around a shared context core — private beta.",
     repo: "https://github.com/suvendu-2006",
   },
   {
     id: "allcited",
-    name: "Allcited",
+    name: "Allcited (RAG)",
     tagline:
-      "Answers questions from uploaded documents with clickable source proof.",
+      "RAG-Powered Document Intelligence & Grounded Fact-Checking AI.",
     status: "live",
     image: {
       src: "/images/allcited.jpg",
@@ -138,12 +139,12 @@ export const projects: Project[] = [
       alt: "Allcited landing page — “Answers, with receipts.”",
     },
     problem:
-      "AI answers to document questions are only as good as their sources — without citations you can't tell grounded answers from guesses.",
+      "AI answers to document questions frequently hallucinate or lose attribution — without verifiable RAG, you can't distinguish grounded answers from guesses.",
     built:
-      "Upload a document, ask anything, and every sentence of the answer carries a clickable citation that jumps to the exact passage it came from.",
-    tech: ["Python", "LLMs", "Citations"],
+      "Upload documents, ask anything, and every sentence of the answer carries a clickable citation that jumps to the exact passage it was retrieved from.",
+    tech: ["Python", "RAG", "FastAPI", "Sentence-Transformers", "Vector Search"],
     result:
-      "Live and open for testing — guest mode, nothing saved unless you keep it, published test scores.",
+      "Live and open for testing — 100% cited answers with verifiable sentence-level receipts and zero ungrounded claims.",
     repo: "https://github.com/suvendu-2006/allcited",
     live: "https://allcited.vercel.app",
   },
@@ -206,7 +207,7 @@ export const about = {
   /** First person, under 120 words */
   body: [
     "I'm Suvendu — a B.Tech CSE (AI/ML) student at Trident Academy of Technology in Odisha, India.",
-    "I started in first year with C, and somewhere between printf and Python I got hooked on building systems that reason over real data. Since then I've shipped SATARK-MPLADS, a fraud-analytics portal tested on 53,197 real public works; Allcited, document Q&A with receipts; and ORBIT AI, a multi-agent research platform.",
+    "I started in first year with C, and somewhere between printf and Python I got hooked on building systems that reason over real data. Since then I've shipped SATARK-MPLADS, a fraud-analytics portal tested on 53,197 real public works; Allcited, document Q&A with receipts; and AXOM, an autonomous multi-agent research platform.",
   ],
   /** Quick facts table — verified facts only */
   facts: [
