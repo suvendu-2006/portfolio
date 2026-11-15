@@ -36,11 +36,11 @@ export interface Social {
 }
 
 export const site = {
-  name: "Suvendu Kumar",
-  short: "Shuv",
+  name: "Suvendu Kumar Sahoo",
+  short: "Suvendu",
   role: "AI/ML builder who ships real systems",
   oneLiner:
-    "I'm Shuv — an AI/ML builder who ships real systems: fraud analytics tested on 53,197 public works, document AI with receipts, and a multi-agent research platform.",
+    "I'm Suvendu — an AI/ML builder who ships real systems: fraud analytics tested on 53,197 public works, document AI with receipts, and a multi-agent research platform.",
   location: "Odisha, India",
   college: "Trident Academy of Technology",
   branch: "B.Tech CSE (AI/ML)",
@@ -50,7 +50,6 @@ export const site = {
 
 export const socials: Social[] = [
   { label: "LinkedIn", href: "https://www.linkedin.com/in/suvendu-kumar" },
-  { label: "X", href: "https://x.com/subh792465" },
   { label: "GitHub", href: "https://github.com/suvendu-2006" },
 ];
 
@@ -58,10 +57,9 @@ export const socials: Social[] = [
 export const githubUser = "suvendu-2006";
 
 /**
- * TODO: set your public email (or wire the contact form via /api/contact —
- * see that file). While null, the email button stays hidden.
+ * Public contact email address.
  */
-export const email: string | null = null;
+export const email: string | null = "sahoosuvendukumar84@gmail.com";
 
 export const proofStrip = [
   { value: "53,197", label: "public works analyzed" },
@@ -104,7 +102,7 @@ export const projects: Project[] = [
       ],
     },
     result:
-      "Tested on 53,197 real public works covering 788 MPs, with live MoSPL/e-SAKSHI-verified data displayed state by state.",
+      "Tested on 53,197 real public works covering 788 MPs, with live MoSPI/e-SAKSHI-verified data displayed state by state.",
     repo: "https://github.com/suvendu-2006/mplads-intelligence-portal",
     live: "https://mplads-intelligence-portal.vercel.app",
   },
@@ -167,12 +165,14 @@ export const phelpsQuotes = [
  */
 export const skills = [
   { name: "Python", level: null },
-  { name: "Vercel", level: null },
-  { name: "Git & GitHub", level: null },
+  { name: "C", level: null },
+  { name: "Java", level: null },
   { name: "Machine Learning", level: "Intermediate" },
+  { name: "PyTorch & Scikit-Learn", level: "Intermediate" },
   { name: "RAG", level: "Intermediate" },
   { name: "Harness", level: "Intermediate" },
   { name: "MCP", level: "Intermediate" },
+  { name: "Git & GitHub", level: null },
 ] as const;
 
 /* ------------------------------------------------------------
