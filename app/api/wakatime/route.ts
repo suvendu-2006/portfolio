@@ -1,6 +1,6 @@
 /**
- * WakaTime API route — tracks pure manual editor typing time.
- * Filters out "AI Coding" to report only hands-on keyboard coding time.
+ * WakaTime API route — tracks pure manual editor typing time from VS Code only.
+ * Filters out Antigravity, AI activity, and all non-VS Code editors.
  */
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,13 @@ interface StatusBarResponse {
       text?: string;
     };
     categories?: Array<{
+      name: string;
+      total_seconds?: number;
+      hours?: number;
+      minutes?: number;
+      digital?: string;
+    }>;
+    editors?: Array<{
       name: string;
       total_seconds?: number;
       hours?: number;
@@ -81,17 +88,19 @@ export async function GET() {
     }
 
     const json = (await res.json()) as StatusBarResponse;
-    const categories = Array.isArray(json.data?.categories) ? json.data.categories : [];
+    const editors = Array.isArray(json.data?.editors) ? json.data.editors : [];
 
-    // Strictly filter for manual keyboard coding (exclude any category with "ai")
-    const manualCategories = categories.filter((c) => !c.name.toLowerCase().includes("ai"));
+    // Strictly filter for VS Code only (exclude Antigravity and all other editors)
+    const vsCodeEditors = editors.filter((e) => {
+      const name = (e.name || "").toLowerCase();
+      return name.includes("vs code") || name.includes("vscode") || name.includes("visual studio code");
+    });
 
     let totalSeconds = 0;
-    if (manualCategories.length > 0) {
-      totalSeconds = manualCategories.reduce((sum, c) => sum + Number(c.total_seconds || 0), 0);
-    } else if (categories.length === 0) {
-      // If no categories array is returned, use grand_total
-      totalSeconds = Number(json.data?.grand_total?.total_seconds || 0);
+    if (editors.length > 0) {
+      totalSeconds = vsCodeEditors.reduce((sum, e) => sum + Number(e.total_seconds || 0), 0);
+    } else {
+      totalSeconds = 0;
     }
 
     const hours = Math.floor(totalSeconds / 3600);
@@ -99,11 +108,12 @@ export async function GET() {
     const totalText = hours > 0 ? `${hours}h ${String(minutes).padStart(2, "0")}m` : `${minutes}m`;
 
     const projects = Array.isArray(json.data?.projects) ? json.data.projects : [];
-    const topProject = projects[0]?.name ?? null;
+    const topProject = totalSeconds > 0 ? (projects[0]?.name ?? null) : null;
 
-    const languages = Array.isArray(json.data?.languages)
-      ? json.data.languages.map((l) => l.name)
-      : [];
+    const languages =
+      totalSeconds > 0 && Array.isArray(json.data?.languages)
+        ? json.data.languages.map((l) => l.name)
+        : [];
 
     const cachedAt = json.cached_at ? new Date(json.cached_at).getTime() : 0;
     const activeNow = totalSeconds > 0 && (cachedAt === 0 || Date.now() - cachedAt < 25 * 60 * 1000);
