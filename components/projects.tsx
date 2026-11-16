@@ -32,7 +32,7 @@ export function Projects() {
         const r = rects[i];
         if (!el || !r || r.bottom < 0 || r.top > vh) return;
         const p = Math.max(-1, Math.min(1, (r.top + r.height / 2 - vh / 2) / vh));
-        el.style.transform = `translate3d(0, ${(p * -5).toFixed(2)}%, 0) scale(1.12)`;
+        el.style.transform = `translate3d(0, ${(p * -4).toFixed(2)}%, 0) scale(1.15)`;
       });
     };
     update();
@@ -81,9 +81,9 @@ export function Projects() {
                 }}
                 aria-haspopup="dialog"
                 aria-label={`Open the ${project.name} case study`}
-                className="spotlight group flex h-full w-full flex-col overflow-hidden rounded-xl border border-line bg-panel text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)]"
+                className="spotlight group isolate flex h-full w-full flex-col overflow-hidden rounded-xl border border-line bg-panel text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-[0_18px_40px_-24px_rgba(0,0,0,0.55)]"
               >
-                <figure className="card-shine relative aspect-[4/3] overflow-hidden border-b border-line">
+                <figure className="card-shine relative aspect-[4/3] overflow-hidden rounded-t-[11px] border-b border-line bg-[#0c0b0a]">
                   <span
                     aria-hidden="true"
                     className="ghost-index absolute left-4 top-3 z-[2] text-5xl sm:text-6xl"
@@ -95,7 +95,7 @@ export function Projects() {
                       figRefs.current[i] = el;
                     }}
                     className="absolute inset-0 will-change-transform"
-                    style={{ transform: "scale(1.12)" }}
+                    style={{ transform: "scale(1.15)" }}
                   >
                     <FadeImage
                       src={project.image.src}
