@@ -107,15 +107,15 @@ export const projects: Project[] = [
     live: "https://mplads-intelligence-portal.vercel.app",
   },
   {
-    id: "axom",
-    name: "AXOM",
+    id: "orbit-ai",
+    name: "ORBIT AI",
     tagline: "Autonomous Multi-Agent AI Research & Intelligence Platform.",
     status: "beta",
     image: {
       src: "/images/orbit.svg",
       width: 1200,
       height: 900,
-      alt: "AXOM — autonomous multi-agent research and intelligence platform",
+      alt: "ORBIT AI — autonomous multi-agent research and intelligence platform",
     },
     problem:
       "Deep research means juggling search, synthesis, and writing across a dozen tabs — context gets lost between steps.",
@@ -128,7 +128,7 @@ export const projects: Project[] = [
   },
   {
     id: "allcited",
-    name: "Allcited (RAG)",
+    name: "Allcited",
     tagline:
       "RAG-Powered Document Intelligence & Grounded Fact-Checking AI.",
     status: "live",
@@ -207,7 +207,7 @@ export const about = {
   /** First person, under 120 words */
   body: [
     "I'm Suvendu — a B.Tech CSE (AI/ML) student at Trident Academy of Technology in Odisha, India.",
-    "I started in first year with C, and somewhere between printf and Python I got hooked on building systems that reason over real data. Since then I've shipped SATARK-MPLADS, a fraud-analytics portal tested on 53,197 real public works; Allcited, document Q&A with receipts; and AXOM, an autonomous multi-agent research platform.",
+    "I started in first year with C, and somewhere between printf and Python I got hooked on building systems that reason over real data. Since then I've shipped SATARK-MPLADS, a fraud-analytics portal tested on 53,197 real public works; Allcited, document Q&A with receipts; and ORBIT AI, an autonomous multi-agent research platform.",
   ],
   /** Quick facts table — verified facts only */
   facts: [
