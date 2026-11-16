@@ -36,11 +36,11 @@ export interface Social {
 }
 
 export const site = {
-  name: "Suvendu Kumar Sahoo",
-  short: "Suvendu",
+  name: "Suvendu Kumar",
+  short: "Shuv",
   role: "AI/ML builder who ships real systems",
   oneLiner:
-    "I'm Suvendu — an AI/ML builder who ships real systems: fraud analytics tested on 53,197 public works, document AI with receipts, and a multi-agent research platform.",
+    "I'm Shuv — an AI/ML builder who ships real systems: fraud analytics tested on 53,197 public works, document AI with receipts, and a multi-agent research platform.",
   location: "Odisha, India",
   college: "Trident Academy of Technology",
   branch: "B.Tech CSE (AI/ML)",
@@ -50,6 +50,7 @@ export const site = {
 
 export const socials: Social[] = [
   { label: "LinkedIn", href: "https://www.linkedin.com/in/suvendu-kumar" },
+  { label: "X", href: "https://x.com/subh792465" },
   { label: "GitHub", href: "https://github.com/suvendu-2006" },
 ];
 
@@ -57,9 +58,10 @@ export const socials: Social[] = [
 export const githubUser = "suvendu-2006";
 
 /**
- * Public contact email address.
+ * TODO: set your public email (or wire the contact form via /api/contact —
+ * see that file). While null, the email button stays hidden.
  */
-export const email: string | null = "sahoosuvendukumar84@gmail.com";
+export const email: string | null = null;
 
 export const proofStrip = [
   { value: "53,197", label: "public works analyzed" },
@@ -102,35 +104,34 @@ export const projects: Project[] = [
       ],
     },
     result:
-      "Tested on 53,197 real public works covering 788 MPs, with live MoSPI/e-SAKSHI-verified data displayed state by state.",
+      "Tested on 53,197 real public works covering 788 MPs, with live MoSPL/e-SAKSHI-verified data displayed state by state.",
     repo: "https://github.com/suvendu-2006/mplads-intelligence-portal",
     live: "https://mplads-intelligence-portal.vercel.app",
   },
   {
     id: "orbit-ai",
     name: "ORBIT AI",
-    tagline: "Autonomous Multi-Agent AI Research & Intelligence Platform.",
+    tagline: "Multi-agent research and productivity platform.",
     status: "beta",
     image: {
       src: "/images/orbit.svg",
       width: 1200,
       height: 900,
-      alt: "ORBIT AI — autonomous multi-agent research and intelligence platform",
+      alt: "ORBIT AI — network of agent nodes orbiting a core model",
     },
     problem:
       "Deep research means juggling search, synthesis, and writing across a dozen tabs — context gets lost between steps.",
     built:
-      "An autonomous platform where specialized agents collaborate on deep research and intelligence workflows, coordinated around a shared context core.",
-    tech: ["Python", "Multi-Agent Systems", "FastAPI", "LLM Reasoning"],
-    result:
-      "Multi-agent research and intelligence workflows coordinated around a shared context core — private beta.",
+      "A platform where specialized agents collaborate on research and productivity workflows, coordinated around a shared context core.",
+    tech: ["Python", "LLM agents"],
+    result: "Multi-agent research workflows coordinated around a shared context core — private beta.",
     repo: "https://github.com/suvendu-2006",
   },
   {
     id: "allcited",
     name: "Allcited",
     tagline:
-      "RAG-Powered Document Intelligence & Grounded Fact-Checking AI.",
+      "Answers questions from uploaded documents with clickable source proof.",
     status: "live",
     image: {
       src: "/images/allcited.jpg",
@@ -139,12 +140,12 @@ export const projects: Project[] = [
       alt: "Allcited landing page — “Answers, with receipts.”",
     },
     problem:
-      "AI answers to document questions frequently hallucinate or lose attribution — without verifiable RAG, you can't distinguish grounded answers from guesses.",
+      "AI answers to document questions are only as good as their sources — without citations you can't tell grounded answers from guesses.",
     built:
-      "Upload documents, ask anything, and every sentence of the answer carries a clickable citation that jumps to the exact passage it was retrieved from.",
-    tech: ["Python", "RAG", "FastAPI", "Sentence-Transformers", "Vector Search"],
+      "Upload a document, ask anything, and every sentence of the answer carries a clickable citation that jumps to the exact passage it came from.",
+    tech: ["Python", "LLMs", "Citations"],
     result:
-      "Live and open for testing — 100% cited answers with verifiable sentence-level receipts and zero ungrounded claims.",
+      "Live and open for testing — guest mode, nothing saved unless you keep it, published test scores.",
     repo: "https://github.com/suvendu-2006/allcited",
     live: "https://allcited.vercel.app",
   },
@@ -166,14 +167,12 @@ export const phelpsQuotes = [
  */
 export const skills = [
   { name: "Python", level: null },
-  { name: "C", level: null },
-  { name: "Java", level: null },
+  { name: "Vercel", level: null },
+  { name: "Git & GitHub", level: null },
   { name: "Machine Learning", level: "Intermediate" },
-  { name: "PyTorch & Scikit-Learn", level: "Intermediate" },
   { name: "RAG", level: "Intermediate" },
   { name: "Harness", level: "Intermediate" },
   { name: "MCP", level: "Intermediate" },
-  { name: "Git & GitHub", level: null },
 ] as const;
 
 /* ------------------------------------------------------------
@@ -207,7 +206,7 @@ export const about = {
   /** First person, under 120 words */
   body: [
     "I'm Suvendu — a B.Tech CSE (AI/ML) student at Trident Academy of Technology in Odisha, India.",
-    "I started in first year with C, and somewhere between printf and Python I got hooked on building systems that reason over real data. Since then I've shipped SATARK-MPLADS, a fraud-analytics portal tested on 53,197 real public works; Allcited, document Q&A with receipts; and ORBIT AI, an autonomous multi-agent research platform.",
+    "I started in first year with C, and somewhere between printf and Python I got hooked on building systems that reason over real data. Since then I've shipped SATARK-MPLADS, a fraud-analytics portal tested on 53,197 real public works; Allcited, document Q&A with receipts; and ORBIT AI, a multi-agent research platform.",
   ],
   /** Quick facts table — verified facts only */
   facts: [
