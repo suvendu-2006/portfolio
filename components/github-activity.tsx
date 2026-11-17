@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { githubUser } from "@/data/content";
 import fallbackContributions from "@/data/github-contributions-fallback.json";
 import { HairLine } from "@/components/hairline";
@@ -168,39 +168,55 @@ export function GithubActivity() {
   }, []);
 
   const year = new Date().getFullYear();
-  const days = data?.days ?? [];
+  const days = useMemo(() => {
+    const rawDays = data?.days ?? [];
+    return [...rawDays].sort((a, b) => a.date.localeCompare(b.date));
+  }, [data?.days]);
 
   // group days into week columns (padding the first week to its weekday)
-  const weeks: Array<Day | null>[] = [];
-  if (days.length) {
+  const weeks: Array<Day | null>[] = useMemo(() => {
+    if (!days.length) return [];
     const firstWeekday = new Date(days[0].date + "T12:00:00Z").getUTCDay();
     const padded: Array<Day | null> = [
       ...Array.from({ length: firstWeekday }, () => null),
       ...days,
     ];
+    const result: Array<Day | null>[] = [];
     for (let i = 0; i < padded.length; i += 7) {
-      weeks.push(padded.slice(i, i + 7));
+      result.push(padded.slice(i, i + 7));
     }
-  }
+    return result;
+  }, [days]);
 
-  // month labels: mark the column where a month first appears
-  const monthLabels: Array<string | null> = [];
-  weeks.forEach((week) => {
-    const first = week.find((d): d is Day => !!d);
-    if (!first) {
-      monthLabels.push(null);
-      return;
-    }
-    const month = Number(first.date.slice(5, 7)) - 1;
-    const day = Number(first.date.slice(8, 10));
-    if (day > 7) {
-      monthLabels.push(null);
-      return;
-    }
-    const label = MONTHS[month];
-    const prev = monthLabels[monthLabels.length - 1];
-    monthLabels.push(label && label !== prev ? label : null);
-  });
+  // month labels: mark the column where each month first appears in order
+  const monthLabels: Array<string | null> = useMemo(() => {
+    const labels: Array<string | null> = Array(weeks.length).fill(null);
+    let lastMonth: number | null = null;
+    let lastLabelCol = -99;
+
+    weeks.forEach((week, col) => {
+      for (const day of week) {
+        if (!day) continue;
+        const m = Number(day.date.slice(5, 7)) - 1;
+        if (lastMonth === null) {
+          lastMonth = m;
+          labels[col] = MONTHS[m];
+          lastLabelCol = col;
+          break;
+        } else if (m !== lastMonth) {
+          lastMonth = m;
+          // Place label if at least 2 columns away from previous label and not at the very last column
+          if (col - lastLabelCol >= 2 && col < weeks.length - 1) {
+            labels[col] = MONTHS[m];
+            lastLabelCol = col;
+          }
+          break;
+        }
+      }
+    });
+
+    return labels;
+  }, [weeks]);
 
   const columns = Math.max(weeks.length, 1);
   const gridTemplate = `repeat(${columns}, ${CELL}px)`;

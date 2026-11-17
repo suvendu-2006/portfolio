@@ -125,6 +125,11 @@ async function fetchFromDirectScrape(user: string, year: string) {
 
   if (!days.length) return null;
 
+  // GitHub's contributions HTML table renders 7 rows (one per weekday),
+  // so linear regex extraction yields all Sundays, then all Mondays, etc.
+  // We must sort by date to restore chronological order.
+  days.sort((a, b) => a.date.localeCompare(b.date));
+
   const totalMatch = html.match(/([0-9,]+)\s+contributions/);
   const totalCount = totalMatch ? parseInt(totalMatch[1].replace(/,/g, ""), 10) : days.length;
 
@@ -135,6 +140,15 @@ async function fetchFromDirectScrape(user: string, year: string) {
     },
     contributions: days,
   };
+}
+
+function ensureSorted(payload: any) {
+  if (payload && Array.isArray(payload.contributions)) {
+    payload.contributions.sort((a: any, b: any) =>
+      String(a?.date || "").localeCompare(String(b?.date || ""))
+    );
+  }
+  return payload;
 }
 
 export async function GET(request: Request) {
@@ -153,6 +167,7 @@ export async function GET(request: Request) {
     try {
       const gqlData = await fetchFromGraphQL(githubUser, token);
       if (gqlData && gqlData.contributions.length > 0) {
+        ensureSorted(gqlData);
         cache = { at: Date.now(), data: gqlData };
         return Response.json(gqlData, {
           headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
@@ -167,6 +182,7 @@ export async function GET(request: Request) {
   try {
     const jogData = await fetchFromJogruber(githubUser, year);
     if (jogData && jogData.contributions.length > 0) {
+      ensureSorted(jogData);
       cache = { at: Date.now(), data: jogData };
       return Response.json(jogData, {
         headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
@@ -180,6 +196,7 @@ export async function GET(request: Request) {
   try {
     const scrapeData = await fetchFromDirectScrape(githubUser, year);
     if (scrapeData && scrapeData.contributions.length > 0) {
+      ensureSorted(scrapeData);
       cache = { at: Date.now(), data: scrapeData };
       return Response.json(scrapeData, {
         headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
@@ -197,10 +214,10 @@ export async function GET(request: Request) {
   }
 
   // 5. Ultimate fallback: static high-fidelity snapshot so visitor NEVER sees an error
-  const fallbackPayload = {
+  const fallbackPayload = ensureSorted({
     total: fallbackData.total,
     contributions: fallbackData.contributions,
-  };
+  });
   return Response.json(fallbackPayload, {
     headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
   });
