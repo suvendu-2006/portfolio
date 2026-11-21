@@ -196,7 +196,7 @@ export function LandsatSpeller() {
       const gap = 16;
       const paddingX = 80;
       const paddingTop = 80;
-      const paddingBottom = 180;
+      const paddingBottom = 130;
 
       const totalWidth = paddingX * 2 + validCards.length * cardWidth + (validCards.length - 1) * gap;
       const totalHeight = paddingTop + cardHeight + paddingBottom;
@@ -255,13 +255,7 @@ export function LandsatSpeller() {
       ctx.fillStyle = "#ffffff";
       ctx.font = "800 58px system-ui, -apple-system, sans-serif";
       ctx.letterSpacing = "0.2em";
-      ctx.fillText(nameString, totalWidth / 2, paddingTop + cardHeight + 90);
-
-      // Subtitle
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "500 22px system-ui, -apple-system, sans-serif";
-      ctx.letterSpacing = "0.06em";
-      ctx.fillText("Celebrate Earth from space with NASA Landsat", totalWidth / 2, paddingTop + cardHeight + 135);
+      ctx.fillText(nameString, totalWidth / 2, paddingTop + cardHeight + 80);
 
       // Trigger download
       const link = document.createElement("a");

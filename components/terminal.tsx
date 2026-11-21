@@ -231,7 +231,7 @@ export function Terminal() {
           setOpen(true);
         }}
         aria-label="Open terminal"
-        className={`fixed bottom-24 left-5 z-[105] hidden items-center gap-2 rounded-full border border-line bg-panel/90 px-4 py-2 font-mono text-[11px] text-muted shadow-lg backdrop-blur transition-all duration-500 hover:border-accent/50 hover:text-accent sm:flex ${
+        className={`fixed bottom-8 sm:bottom-10 left-1/2 -translate-x-1/2 z-[105] hidden items-center gap-2 rounded-full border border-line bg-panel/90 px-4 py-2 font-mono text-[11px] text-muted shadow-lg backdrop-blur transition-all duration-500 hover:border-accent/50 hover:text-accent sm:flex ${
           hintVisible ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
         }`}
       >

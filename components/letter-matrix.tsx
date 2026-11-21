@@ -56,6 +56,7 @@ export function LetterMatrix({
     const cleanupTimers: ReturnType<typeof setInterval>[] = [];
     const ghosts: HTMLSpanElement[] = [];
     const words_: HTMLSpanElement[] = [];
+    const BANNED_WORDS = ["SEX", "FUCK", "SHIT", "ASS", "BITCH", "DICK", "COCK", "PISS", "CUNT", "SLUT"];
 
     for (let r = 0; r < rows; r++) {
       const rowEl = document.createElement("div");
@@ -63,6 +64,7 @@ export function LetterMatrix({
       const word = words[r] || null;
       const wordStart = word ? Math.floor((cols - word.length) / 2) : -1;
       const used = new Set<string>(word ? word.split("") : []);
+      const rowGhosts: HTMLSpanElement[] = [];
 
       for (let c = 0; c < cols; c++) {
         const span = document.createElement("span");
@@ -79,10 +81,23 @@ export function LetterMatrix({
           used.add(ch);
           span.textContent = ch;
           ghosts.push(span);
+          rowGhosts.push(span);
           span.addEventListener("pointerenter", () => flicker(span, span.textContent || "", 2));
         }
         rowEl.appendChild(span);
       }
+
+      // Sanitize row so random generation never forms offensive words
+      let rowText = Array.from(rowEl.children).map((el) => el.textContent || "").join("");
+      let attempts = 0;
+      while (BANNED_WORDS.some((w) => rowText.includes(w)) && attempts < 10) {
+        attempts++;
+        rowGhosts.forEach((g) => {
+          g.textContent = randomLetter();
+        });
+        rowText = Array.from(rowEl.children).map((el) => el.textContent || "").join("");
+      }
+
       container.appendChild(rowEl);
     }
 

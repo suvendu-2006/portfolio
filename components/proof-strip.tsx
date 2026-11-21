@@ -44,7 +44,7 @@ function CountUp({ value, delay = 0 }: { value: string; delay?: number }) {
 
 export function ProofStrip() {
   return (
-    <section aria-label="Key numbers" className="border-y border-line bg-panel/50">
+    <section aria-label="Key numbers" className="relative z-10 border-y border-line bg-bg shadow-sm">
       <div className="mx-auto grid max-w-content grid-cols-1 divide-y divide-line px-5 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-8">
         {proofStrip.map((stat, i) => (
           <Reveal key={stat.label} delay={i * 0.08} className="py-10 sm:py-14">
