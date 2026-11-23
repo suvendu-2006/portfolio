@@ -131,6 +131,27 @@ export function Nav() {
                 </a>
               );
             })}
+            <a
+              href="/resume.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="See Resume (opens PDF in a new tab)"
+              className="group ml-1 inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/70 px-3 py-1 text-[12px] font-medium text-ink transition-all hover:border-accent hover:text-accent active:scale-95"
+            >
+              <span>See Resume</span>
+              <svg
+                className="size-3 text-muted transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M7 17L17 7M17 7H7M17 7V17" />
+              </svg>
+            </a>
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent("shuv:open-palette"))}
@@ -143,8 +164,18 @@ export function Nav() {
             <ThemeToggle />
           </nav>
 
-          {/* Mobile Action Buttons (Theme Toggle + Hamburger Menu) */}
+          {/* Mobile Action Buttons (See Resume + Theme Toggle + Hamburger Menu) */}
           <div className="flex sm:hidden items-center gap-1.5">
+            <a
+              href="/resume.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="See Resume"
+              className="flex h-8 items-center gap-1 rounded-lg border border-line bg-panel/80 px-2.5 text-[11px] font-semibold text-ink transition-colors hover:border-accent/40 active:scale-95"
+            >
+              <span>Resume</span>
+              <span className="text-[10px] text-accent">↗</span>
+            </a>
             <ThemeToggle />
             <button
               type="button"
@@ -198,6 +229,19 @@ export function Nav() {
                     </a>
                   );
                 })}
+                <a
+                  href="/resume.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="mt-1 flex items-center justify-between rounded-lg border border-accent/25 bg-accent/10 px-3.5 py-3 text-[15px] font-semibold text-accent transition-colors active:scale-[0.98]"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>See Resume</span>
+                    <span className="text-xs">↗</span>
+                  </span>
+                  <span className="text-xs font-mono text-accent/70">PDF</span>
+                </a>
               </nav>
             </m.div>
           )}

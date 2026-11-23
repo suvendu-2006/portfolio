@@ -47,7 +47,7 @@ export function Footer() {
           <p>
             Copyright <span suppressHydrationWarning>{new Date().getFullYear()}</span> {site.name}.
           </p>
-          <ul className="flex gap-2">
+          <ul className="flex flex-wrap items-center gap-2">
             {socials.map((s) => (
               <li key={s.label}>
                 <a
@@ -60,6 +60,17 @@ export function Footer() {
                 </a>
               </li>
             ))}
+            <li>
+              <a
+                href="/resume.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-sm px-2 py-2 font-medium text-accent transition-colors hover:underline"
+              >
+                <span>Resume</span>
+                <span className="text-[10px]">↗</span>
+              </a>
+            </li>
           </ul>
           <div className="flex items-center gap-2">
             <LocalTime />

@@ -46,6 +46,7 @@ export function Terminal() {
           out("  whoami      who is shuv"),
           out("  projects    the three systems"),
           out("  skills      what i actually use"),
+          out("  resume      view suvendu's resume (PDF)"),
           out("  spotify     what's playing right now"),
           out("  github      contributions this year"),
           out("  quote       a line worth remembering"),
@@ -55,6 +56,9 @@ export function Terminal() {
           out("  clear       wipe the screen"),
           out("  exit        close the terminal"),
         ];
+      case "resume":
+        window.open("/resume.pdf", "_blank", "noopener,noreferrer");
+        return [ok("opened resume in a new tab.", "/resume.pdf")];
       case "whoami":
         return [
           ok(`${site.name} — ${site.role}.`),

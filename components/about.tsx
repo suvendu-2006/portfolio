@@ -53,6 +53,46 @@ export function About() {
                 </div>
               ))}
             </dl>
+
+            <div className="mt-8 flex flex-wrap items-center gap-4 pt-2">
+              <a
+                href="/resume.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-2 rounded-full border border-accent bg-accent px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-bg transition-all hover:bg-accent/90 active:scale-95"
+              >
+                <span>See Resume</span>
+                <svg
+                  className="size-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M7 17L17 7M17 7H7M17 7V17" />
+                </svg>
+              </a>
+              <a
+                href="/Suvendu_Kumar_Sahoo_Resume.pdf"
+                download="Suvendu_Kumar_Sahoo_Resume.pdf"
+                className="inline-flex items-center gap-2 text-xs font-mono text-muted transition-colors hover:text-ink"
+              >
+                <svg
+                  className="size-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                <span>Download PDF (244 KB)</span>
+              </a>
+            </div>
           </Reveal>
         </div>
       </div>

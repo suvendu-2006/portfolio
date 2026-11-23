@@ -46,6 +46,7 @@ export const site = {
   branch: "B.Tech CSE (AI/ML)",
   /** TODO: add your production domain after the first Vercel deploy (used for sitemap/OG) */
   url: "https://shuv-ml.vercel.app",
+  resume: "/resume.pdf",
 } as const;
 
 export const socials: Social[] = [
