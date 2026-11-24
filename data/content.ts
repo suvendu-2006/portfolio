@@ -58,11 +58,7 @@ export const socials: Social[] = [
 /** GitHub username for the live activity calendar */
 export const githubUser = "suvendu-2006";
 
-/**
- * TODO: set your public email (or wire the contact form via /api/contact —
- * see that file). While null, the email button stays hidden.
- */
-export const email: string | null = null;
+export const email: string | null = "sahoosuvendukumar84@gmail.com";
 
 export const proofStrip = [
   { value: "53,197", label: "public works analyzed" },

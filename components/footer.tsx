@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { useEffect, useState } from "react";
 import { site, socials } from "@/data/content";
 import { LocalTime } from "@/components/local-time";

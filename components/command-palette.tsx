@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { githubUser } from "@/data/content";
+import { githubUser, email } from "@/data/content";
 
 interface Item {
   label: string;
@@ -94,7 +94,7 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const email = "iitsuvendu@gmail.com";
+  const defaultEmail = email || "sahoosuvendukumar84@gmail.com";
 
   const scrollTo = (id: string | null) => {
     if (id === null) {
@@ -164,10 +164,10 @@ export function CommandPalette() {
         },
         {
           label: "Copy email",
-          hint: email,
-                    icon: <MailIcon />,
+          hint: defaultEmail,
+          icon: <MailIcon />,
           run: () => {
-            navigator.clipboard?.writeText(email).catch(() => {});
+            navigator.clipboard?.writeText(defaultEmail).catch(() => {});
             setOpen(false);
           },
         },

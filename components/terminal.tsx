@@ -63,10 +63,10 @@ export function Terminal() {
         try {
           const res = await fetch("/api/visitor");
           const d = await res.json();
-          const num = typeof d.count === "number" ? d.count.toLocaleString("en-US") : "3,321";
+          const num = typeof d.count === "number" ? d.count.toLocaleString("en-US") : "1";
           return [ok(`you are unique visitor #${num}`, "/#contact")];
         } catch {
-          return [ok("you are visitor #3,321", "/#contact")];
+          return [ok("you are visitor #1", "/#contact")];
         }
       }
       case "resume":

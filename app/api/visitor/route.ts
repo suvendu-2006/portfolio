@@ -43,8 +43,12 @@ export async function GET(req: Request) {
       });
     }
 
-    // Admin reset to make counter strictly real from 0
+    // Admin reset to make counter strictly real from 0 (protected with secret)
     if (searchParams.get("reset") === "real") {
+      const secret = searchParams.get("secret");
+      if (secret !== SALT && secret !== process.env.ADMIN_SECRET) {
+        return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      }
       await redis.del("portfolio:unique_visitors");
       await redis.set("portfolio:visitor_count", 0);
       return NextResponse.json({
