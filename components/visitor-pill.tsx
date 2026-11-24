@@ -8,7 +8,7 @@ interface VisitorPillProps {
 }
 
 export function VisitorPill({ onClick, className = "" }: VisitorPillProps) {
-  const [count, setCount] = useState<number | null>(3317);
+  const [count, setCount] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -41,14 +41,14 @@ export function VisitorPill({ onClick, className = "" }: VisitorPillProps) {
           }
         }
       } catch (err) {
-        // Fallback gracefully to default
+        // Fallback gracefully
       }
     }
 
     recordVisitor();
   }, []);
 
-  const formatted = count !== null ? count.toLocaleString("en-US") : "3,317";
+  const formatted = count !== null ? count.toLocaleString("en-US") : "—";
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (onClick) {
@@ -77,7 +77,7 @@ export function VisitorPill({ onClick, className = "" }: VisitorPillProps) {
           className="font-bold text-ink transition-colors group-hover:text-accent"
           suppressHydrationWarning
         >
-          {mounted ? formatted : "3,317"}
+          {mounted && count !== null ? formatted : "—"}
         </strong>
       </span>
     </a>

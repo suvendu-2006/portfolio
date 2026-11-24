@@ -3,7 +3,7 @@ import { Redis } from "@upstash/redis";
 
 export const runtime = "edge";
 
-const BASE_START_COUNT = 3317;
+const BASE_START_COUNT = 0;
 const SALT = process.env.VISITOR_SALT || "shuv_portfolio_visitor_secret_salt_2026";
 
 function getRedis(): Redis | null {
@@ -31,13 +31,27 @@ async function hashString(str: string): Promise<string> {
     .join("");
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
     const redis = getRedis();
+
     if (!redis) {
       return NextResponse.json({
-        count: BASE_START_COUNT,
+        count: 1,
         configured: false,
+      });
+    }
+
+    // Admin reset to make counter strictly real from 0
+    if (searchParams.get("reset") === "real") {
+      await redis.del("portfolio:unique_visitors");
+      await redis.set("portfolio:visitor_count", 0);
+      return NextResponse.json({
+        ok: true,
+        message: "Reset visitor counter to 0 for real tracking",
+        count: 0,
+        configured: true,
       });
     }
 
@@ -48,7 +62,7 @@ export async function GET() {
     });
   } catch (err) {
     console.error("Visitor count GET error:", err);
-    return NextResponse.json({ count: BASE_START_COUNT, configured: false });
+    return NextResponse.json({ count: 1, configured: false });
   }
 }
 
@@ -61,10 +75,10 @@ export async function POST(req: Request) {
 
     const redis = getRedis();
 
-    // If redis is not configured yet, return initial base count gracefully
+    // If redis is not configured yet, return fallback count
     if (!redis) {
       return NextResponse.json({
-        count: BASE_START_COUNT,
+        count: 1,
         isNew: false,
         configured: false,
       });
@@ -73,12 +87,12 @@ export async function POST(req: Request) {
     // Initialize base counter if not present
     const existing = await redis.get<number>("portfolio:visitor_count");
     if (existing === null || existing === undefined) {
-      await redis.set("portfolio:visitor_count", BASE_START_COUNT);
+      await redis.set("portfolio:visitor_count", 0);
     }
 
     // Do not count automated bots
     if (isBot) {
-      const count = (await redis.get<number>("portfolio:visitor_count")) ?? BASE_START_COUNT;
+      const count = (await redis.get<number>("portfolio:visitor_count")) ?? 1;
       return NextResponse.json({ count, isNew: false, configured: true });
     }
 
@@ -102,7 +116,7 @@ export async function POST(req: Request) {
     // Atomically check if this fingerprint has been recorded in our unique set
     const isMember = await redis.sismember("portfolio:unique_visitors", hash);
 
-    let count = (await redis.get<number>("portfolio:visitor_count")) ?? BASE_START_COUNT;
+    let count = (await redis.get<number>("portfolio:visitor_count")) ?? 0;
     let isNew = false;
 
     if (!isMember) {
@@ -121,7 +135,7 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("Visitor count POST error:", err);
     return NextResponse.json({
-      count: BASE_START_COUNT,
+      count: 1,
       isNew: false,
       configured: false,
     });
