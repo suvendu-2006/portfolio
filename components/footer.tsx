@@ -8,6 +8,7 @@ import { LocalTime } from "@/components/local-time";
 import { FooterWordmark } from "@/components/footer-wordmark";
 import { HairLine } from "@/components/hairline";
 import { QuoteDust } from "@/components/quote-dust";
+import { VisitorPill } from "@/components/visitor-pill";
 
 export function Footer() {
   // scroll progress for the back-to-top ring
@@ -41,6 +42,11 @@ export function Footer() {
             <QuoteDust author="Michael Phelps" />
           </div>
         </div>
+
+        <div className="mt-8 flex justify-center sm:mt-10">
+          <VisitorPill />
+        </div>
+
         <FooterWordmark text={site.name.split(" ")[0].toUpperCase()} />
 
         <div className="mt-8 flex flex-col items-center gap-4 border-t border-line py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-xs text-muted sm:flex-row sm:justify-between">

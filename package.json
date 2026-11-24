@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@upstash/redis": "^1.41.0",
     "framer-motion": "11.11.9",
     "next": "14.2.15",
     "qrcode": "^1.5.4",
