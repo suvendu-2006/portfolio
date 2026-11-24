@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-export function VisitorPill() {
+interface VisitorPillProps {
+  onClick?: () => void;
+  className?: string;
+}
+
+export function VisitorPill({ onClick, className = "" }: VisitorPillProps) {
   const [count, setCount] = useState<number | null>(3317);
   const [mounted, setMounted] = useState(false);
 
@@ -45,12 +50,20 @@ export function VisitorPill() {
 
   const formatted = count !== null ? count.toLocaleString("en-US") : "3,317";
 
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (onClick) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <a
       href="#contact"
+      onClick={handleClick}
       title="Click to say hi!"
       aria-label={`You are visitor number ${formatted}. Click to jump to the contact form to say hi.`}
-      className="group relative inline-flex items-center gap-2 rounded-full border border-line/80 bg-panel/90 px-6 py-2.5 shadow-md backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:border-accent/50 hover:bg-panel hover:shadow-lg active:scale-95"
+      className={`group relative inline-flex items-center gap-2 rounded-full border border-line/80 bg-panel/90 px-6 py-2.5 shadow-md backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:border-accent/50 hover:bg-panel hover:shadow-lg active:scale-95 ${className}`}
     >
       {/* Subtle pulsing live indicator dot */}
       <span className="relative flex size-2">

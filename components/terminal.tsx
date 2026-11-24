@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { phelpsQuotes, projects, site, skills, githubUser } from "@/data/content";
+import { VisitorPill } from "@/components/visitor-pill";
 
 type Kind = "cmd" | "out" | "ok" | "err";
 interface Line {
@@ -47,6 +48,7 @@ export function Terminal() {
           out("  projects    the three systems"),
           out("  skills      what i actually use"),
           out("  resume      view suvendu's resume (PDF)"),
+          out("  visitor     live unique visitor count"),
           out("  spotify     what's playing right now"),
           out("  github      contributions this year"),
           out("  quote       a line worth remembering"),
@@ -56,6 +58,17 @@ export function Terminal() {
           out("  clear       wipe the screen"),
           out("  exit        close the terminal"),
         ];
+      case "visitor":
+      case "visitors": {
+        try {
+          const res = await fetch("/api/visitor");
+          const d = await res.json();
+          const num = typeof d.count === "number" ? d.count.toLocaleString("en-US") : "3,321";
+          return [ok(`you are unique visitor #${num}`, "/#contact")];
+        } catch {
+          return [ok("you are visitor #3,321", "/#contact")];
+        }
+      }
       case "resume":
         window.open("/resume.pdf", "_blank", "noopener,noreferrer");
         return [ok("opened resume in a new tab.", "/resume.pdf")];
@@ -264,6 +277,23 @@ export function Terminal() {
             >
               esc
             </button>
+          </div>
+
+          {/* Secret visitor pill banner */}
+          <div className="flex items-center justify-center border-b border-line/50 bg-[#0e0e12]/80 px-4 py-3">
+            <VisitorPill
+              onClick={() => {
+                close();
+                window.setTimeout(() => {
+                  const target = document.getElementById("contact");
+                  if (target) {
+                    const headerOffset = 64;
+                    const pos = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+                    window.scrollTo({ top: pos, behavior: "smooth" });
+                  }
+                }, 100);
+              }}
+            />
           </div>
 
           {/* output + input */}
