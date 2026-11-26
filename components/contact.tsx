@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { email as publicEmail } from "@/data/content";
 import { MaskReveal } from "@/components/mask-reveal";
 import { Reveal } from "@/components/reveal";
 import { Scramble } from "@/components/scramble";
@@ -54,22 +53,11 @@ export function Contact() {
         );
         if (json.mailto) {
           setMailtoUrl(json.mailto);
-        } else {
-          const subject = encodeURIComponent(`Portfolio message from ${name}`);
-          const body = encodeURIComponent(
-            `Name: ${name}\nEmail: ${senderEmail}\n\nMessage:\n${msgText}`
-          );
-          setMailtoUrl(`mailto:sahoosuvendukumar84@gmail.com?subject=${subject}&body=${body}`);
         }
       }
     } catch {
       setState("error");
-      setMessage("Network error. You can send via your mail app directly:");
-      const subject = encodeURIComponent(`Portfolio message from ${name}`);
-      const body = encodeURIComponent(
-        `Name: ${name}\nEmail: ${senderEmail}\n\nMessage:\n${msgText}`
-      );
-      setMailtoUrl(`mailto:sahoosuvendukumar84@gmail.com?subject=${subject}&body=${body}`);
+      setMessage("Network error. Please try again later.");
     }
   }
 
@@ -96,16 +84,6 @@ export function Contact() {
             </p>
 
             <ConnectWithMe />
-
-            {publicEmail ? (
-              <a
-                href={`mailto:${publicEmail}`}
-                className="group mt-8 block rounded-xl border border-line bg-panel p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/50"
-              >
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">Email</p>
-                <p className="mt-1 text-lg font-semibold text-ink">{publicEmail}</p>
-              </a>
-            ) : null}
           </Reveal>
 
           <Reveal delay={0.1}>

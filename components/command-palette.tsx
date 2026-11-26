@@ -94,8 +94,6 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const defaultEmail = email || "sahoosuvendukumar84@gmail.com";
-
   const scrollTo = (id: string | null) => {
     if (id === null) {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -162,15 +160,21 @@ export function CommandPalette() {
             window.setTimeout(() => window.dispatchEvent(new CustomEvent("shuv:open-terminal")), 200);
           },
         },
-        {
-          label: "Copy email",
-          hint: defaultEmail,
-          icon: <MailIcon />,
-          run: () => {
-            navigator.clipboard?.writeText(defaultEmail).catch(() => {});
-            setOpen(false);
-          },
-        },
+        ...(email
+          ? [
+              {
+                label: "Copy email",
+                hint: email,
+                icon: <MailIcon />,
+                run: () => {
+                  if (email) {
+                    navigator.clipboard?.writeText(email).catch(() => {});
+                  }
+                  setOpen(false);
+                },
+              },
+            ]
+          : []),
         {
           label: "Open GitHub",
           hint: `github.com/${githubUser}`,

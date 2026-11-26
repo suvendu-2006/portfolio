@@ -58,7 +58,7 @@ export const socials: Social[] = [
 /** GitHub username for the live activity calendar */
 export const githubUser = "suvendu-2006";
 
-export const email: string | null = "sahoosuvendukumar84@gmail.com";
+export const email: string | null = null;
 
 export const proofStrip = [
   { value: "53,197", label: "public works analyzed" },

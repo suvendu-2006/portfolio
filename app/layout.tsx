@@ -87,7 +87,7 @@ const themeInit = `try{if(localStorage.getItem("theme")==="light")document.docum
 const consoleSig = `try{
 console.log("%c S. ","background:#5fbdaa;color:#0a0a0b;font-size:26px;font-weight:800;border-radius:10px;padding:2px 14px");
 console.log("%c shuv was here. found the secret layer? press ~ on the site.","color:#5fbdaa;font-size:12px;font-family:monospace");
-console.log("%c hiring? iitsuvendu@gmail.com","color:#a1a1aa;font-size:12px;font-family:monospace");
+console.log("%c let's build something — send a message via the contact form!","color:#a1a1aa;font-size:12px;font-family:monospace");
 }catch(_){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
